@@ -32,6 +32,12 @@ input,select,textarea{width:100%;border:1px solid #bfc8c3;border-radius:5px;padd
 .search-panel label{display:flex;flex-direction:column;gap:5px;min-width:240px;font-weight:600}
 .search-panel input{min-width:240px}
 .search-panel>input{flex:1;min-width:220px}
+
+.nav-group{width:100%}
+.nav-parent{width:100%;display:flex;align-items:center;gap:8px}
+.nav-submenu{padding-left:14px}
+.nav-submenu button{width:100%;font-size:.94em}
+
 </style>
 
 <style id="mpf-logo-style">
@@ -351,6 +357,15 @@ a{color:#8a6b00}
 <div class="nav-group open"><button class="nav-group-title" type="button" onclick="this.parentElement.classList.toggle('open')">👨‍🌾 Broiler Farmer <span>⌄</span></button><div class="nav-group-items"><button onclick="tab('farmers',this)">Integration</button><button onclick="tab('batches',this)">Broiler Batches</button><button onclick="tab('followups',this)">Follow-up</button><button onclick="tab('lifting',this)">Lifting</button></div></div>
 <button onclick="tab('sales',this)"><span class="nav-icon">🛒</span>Commercial Sales</button>
 <button onclick="tab('customers',this)"><span class="nav-icon">👥</span>Customers</button>
+
+<div class="nav-group" id="inventoryNavGroup">
+  <button class="nav-parent" onclick="toggleInventoryMenu(event)"><span class="nav-icon">📦</span>Inventory <span style="margin-left:auto">▾</span></button>
+  <div class="nav-submenu" id="inventoryNavMenu" style="display:none">
+    <button onclick="openInventoryManagement(this)"><span class="nav-icon">📦</span>Inventory Management</button>
+    <button onclick="openInventoryPOS(this)"><span class="nav-icon">🧾</span>POS Inventory Sales</button>
+  </div>
+</div>
+<button onclick="tab('salesRecords',this)"><span class="nav-icon">📊</span>Sales Records</button>
 <div class="nav-group"><button class="nav-group-title" type="button" onclick="this.parentElement.classList.toggle('open')">🎓 Training Registration <span>⌄</span></button><div class="nav-group-items"><button onclick="tab('training',this)">Training</button><button onclick="tab('certificates',this)">Completed Certificates</button></div></div>
 <button onclick="tab('reports',this)"><span class="nav-icon">📊</span>Reports</button><button onclick="tab('settings',this)"><span class="nav-icon">⚙️</span>Settings</button>
 </nav>
@@ -370,7 +385,9 @@ a{color:#8a6b00}
 
   <div class="dash-grid">
     <div class="dash-card dash-kpi"><div class="dash-icon">🐣</div><div class="label">Active Batches</div><div class="value" id="dashBatches">0</div><div class="sub">Current broiler batches</div></div>
-    <div class="dash-card dash-kpi"><div class="dash-icon">👨‍🌾</div><div class="label">Farmers</div><div class="value" id="dashFarmers">0</div><div class="sub">Registered integration farmers</div></div>
+    <div class="dash-card dash-kpi" style="cursor:pointer" onclick="openFarmersByStatus('All')"><div class="dash-icon">👨‍🌾</div><div class="label">Farmers</div><div class="value" id="dashFarmers">0</div><div class="sub">Registered integration farmers</div></div>
+<div class="dash-card dash-kpi" style="cursor:pointer" onclick="openFarmersByStatus('Active')"><div class="dash-icon">✅</div><div class="label">Active Farmers</div><div class="value" id="dashActiveFarmers">0</div><div class="sub">Click to view active farmers</div></div>
+<div class="dash-card dash-kpi" style="cursor:pointer" onclick="openFarmersByStatus('Inactive')"><div class="dash-icon">⏸️</div><div class="label">Inactive Farmers</div><div class="value" id="dashInactiveFarmers">0</div><div class="sub">Click to view inactive farmers</div></div>
     <div class="dash-card dash-kpi"><div class="dash-icon">🛒</div><div class="label">Sales Orders</div><div class="value" id="dashSales">0</div><div class="sub">Commercial orders recorded</div></div>
     <div class="dash-card dash-kpi"><div class="dash-icon">🚚</div><div class="label">Birds Lifted</div><div class="value" id="dashLifted">0</div><div class="sub">Total lifting quantity</div></div>
   </div>
@@ -414,14 +431,15 @@ a{color:#8a6b00}
     try{
       const d=window.db||db;
       if(!d)return;
-      const batches=d.batches||[], farmers=d.farmers||[], sales=d.sales||[], lifts=d.liftings||[], training=d.training||[];
+      const batches=d.batches||[], farmers=d.farmers||[], sales=d.sales||[], lifts=(d.liftings||[]).filter(x=>(x.outletType||'Our Outlet')!=='Other Outlet'), training=d.training||[];
       const active=batches.filter(x=>!['Completed','Closed','Cancelled'].includes(String(x.status||''))).length;
       const lifted=lifts.reduce((n,x)=>n+Number(x.qty||0),0);
       const pendingSales=sales.filter(x=>!['Delivered','Completed','Complete','Cancelled'].includes(String(x.status||'')));
       const pending=pendingSales.length;
       const completed=lifts.filter(x=>String(x.status||'')==='Completed').length;
       const outstanding=sales.reduce((n,x)=>n+Math.max(0,Number(x.total||0)-Number(x.advance||0)),0);
-      [['dashBatches',active],['dashFarmers',farmers.length],['dashSales',sales.length],['dashLifted',lifted],
+      const activeFarmers=farmers.filter(f=>(f.status||'Active')==='Active').length;const inactiveFarmers=farmers.filter(f=>(f.status||'Active')==='Inactive').length;
+      [['dashBatches',active],['dashFarmers',farmers.length],['dashActiveFarmers',activeFarmers],['dashInactiveFarmers',inactiveFarmers],['dashSales',sales.length],['dashLifted',lifted],
        ['dashPending',pending],['dashCompletedLift',completed],['dashTraining',training.length]].forEach(([id,v])=>{
         const el=document.getElementById(id);if(el)el.textContent=Number(v).toLocaleString('en-IN');
       });
@@ -466,7 +484,9 @@ a{color:#8a6b00}
 </script>
 
 <div class="cards">
-<div class="card"><div class="dash-label"><span class="dash-icon">👨‍🌾</span>Integration Farmers</div><b id="dFarmers">0</b></div>
+<div class="card" style="cursor:pointer" onclick="openFarmersByStatus('All')"><div class="dash-label"><span class="dash-icon">👨‍🌾</span>Integration Farmers</div><b id="dFarmers">0</b></div>
+<div class="card" style="cursor:pointer" onclick="openFarmersByStatus('Active')"><div class="dash-label"><span class="dash-icon">✅</span>Active Farmers</div><b id="dActiveFarmers">0</b></div>
+<div class="card" style="cursor:pointer" onclick="openFarmersByStatus('Inactive')"><div class="dash-label"><span class="dash-icon">⏸️</span>Inactive Farmers</div><b id="dInactiveFarmers">0</b></div>
 <div class="card"><div class="dash-label"><span class="dash-icon">🐔</span>Active Batches</div><b id="dBatches">0</b></div>
 <div class="card"><div class="dash-label"><span class="dash-icon">🐣</span>Birds on Farm</div><b id="dBirds">0</b></div>
 <div class="card"><div class="dash-label"><span class="dash-icon">❤️</span>Health Alerts</div><b id="dAlerts">0</b></div>
@@ -503,12 +523,13 @@ a{color:#8a6b00}
 <div class="panel"><h2>Broiler Integration - Farmer Registration</h2>
 <div class="grid">
 <label>Farmer Name<input id="fName"></label><label>Contact No.<input id="fPhone"></label><label>Address<textarea id="fAddress" style="min-height:45px"></textarea></label><label>District<select id="fDistrict"><option>Imphal East</option><option>Imphal West</option><option>Thoubal</option><option>Bishnupur</option><option>Chandel</option><option>Senapati</option><option>Ukhrul</option></select></label>
-<label>Farm Location<input id="fFarmLocation"></label><label>No. of Sheds<input id="fSheds" type="number"></label><label>Farm Capacity<input id="fCapacity" type="number"></label><label>Assigned Staff<input id="fStaff"></label><label>Integration Lifting Type<select id="fLiftingType"><option value="Lifting">Lifting</option><option value="Non-Lifting">Non-Lifting</option></select></label>
+<label>Farm Location<input id="fFarmLocation"></label><label>No. of Sheds<input id="fSheds" type="number"></label><label>Farm Capacity<input id="fCapacity" type="number"></label><label>Assigned Staff<input id="fStaff"></label><label>Farmer Status<select id="fStatus"><option value="Active" selected>Active</option><option value="Inactive">Inactive</option></select></label><label>Integration Lifting Type<select id="fLiftingType"><option value="Lifting">Lifting</option><option value="Non-Lifting">Non-Lifting</option></select></label>
 <label>Have You Reared Birds Before?<select id="fReared" onchange="toggleFarmerHistory()"><option>No</option><option>Yes</option></select></label><div id="farmerHistory" class="grid" style="display:none;grid-column:1/-1"><label>Previous Farm Capacity<input id="fPrevCapacity" type="number"></label><label>Previous Business Partner<input id="fPartner"></label><label>Farming Type<select id="fFarmingType"><option>Contract</option><option>Independent</option></select></label><label>Previous Feed Brand<input id="fPrevFeed"></label><label>Previous Chicks Brand<input id="fPrevChicks"></label></div><label>Remarks<textarea id="fRemarks"></textarea></label>
 </div><button class="primary" id="farmerSave" onclick="saveFarmer()">Save Farmer</button>
 </div>
-<div class="panel"><h3>Registered Integration Farmers</h3><input placeholder="Search..." oninput="renderFarmers(this.value)">
-<div class="tablewrap"><table><thead><tr><th>ID</th><th>Name</th><th>Contact</th><th>Address</th><th>District</th><th>Farm Location</th><th>Sheds</th><th>Capacity</th><th>Staff</th><th>Lifting Type</th><th>Actions</th></tr></thead><tbody id="farmerRows"></tbody></table></div><div id="pager-farmers" class="pager"></div></div>
+<div class="panel"><h3>Registered Integration Farmers</h3>
+<div class="grid" style="grid-template-columns:2fr 1fr"><label>Search<input id="farmerSearchBox" placeholder="Search..." oninput="renderFarmers(this.value)"></label><label>Status Filter<select id="farmerStatusFilter" onchange="setFarmerStatusFilter(this.value)"><option value="All">All Farmers</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label></div>
+<div class="tablewrap"><table><thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Contact</th><th>Address</th><th>District</th><th>Farm Location</th><th>Sheds</th><th>Capacity</th><th>Staff</th><th>Lifting Type</th><th>Actions</th></tr></thead><tbody id="farmerRows"></tbody></table></div><div id="pager-farmers" class="pager"></div></div>
 </section>
 
 <datalist id="farmerList"></datalist>
@@ -641,7 +662,11 @@ a{color:#8a6b00}
 
 <section id="lifting" class="tab">
 <div class="panel"><h2>Ready Bird / Lifting</h2>
-<div class="grid"><label>Farmer<input id="lFarmerSearch" autocomplete="off" placeholder="Search farmer name from list" oninput="selectLiftingFarmer()" onblur="validateFarmerSearch('lFarmerSearch','lFarmer');filterLiftingBatchesByFarmer()"><select id="lFarmer" style="display:none" disabled></select></label><label>Batch<select id="lBatch" onchange="updateLiftingAuto()"></select></label><label>Lifting Date<input id="lDate" type="date" onchange="updateLiftingAuto()"></label><label id="lConfirmDateWrap" style="display:none">Farmer Confirm Date<input id="lConfirmDate" type="date" title="Enter the date when the farmer confirmed the lifting"></label><label>Bird Age (days)<input id="lAge" type="number" readonly></label><label>Live Birds Available<input id="lAvailable" type="number" readonly></label><label>Birds Lifted<input id="lQty" type="number" min="0" onchange="updateLiftingStatus()"></label>
+<div class="grid"><label>Farmer<input id="lFarmerSearch" autocomplete="off" placeholder="Search farmer name from list" oninput="selectLiftingFarmer()" onblur="validateFarmerSearch('lFarmerSearch','lFarmer');filterLiftingBatchesByFarmer()"><select id="lFarmer" style="display:none" disabled></select></label><label>Batch
+<input id="lBatchSearch" list="lBatchList" autocomplete="off" placeholder="Search batch ID, farmer or breed" oninput="selectLiftingBatch()" onblur="validateLiftingBatchSearch()">
+<datalist id="lBatchList"></datalist>
+<select id="lBatch" style="display:none" onchange="updateLiftingAuto()"></select>
+</label><label>Lifting Date<input id="lDate" type="date" onchange="updateLiftingAuto()"></label><label id="lConfirmDateWrap" style="display:none">Farmer Confirm Date<input id="lConfirmDate" type="date" title="Enter the date when the farmer confirmed the lifting"></label><label>Bird Age (days)<input id="lAge" type="number" readonly></label><label>Live Birds Available<input id="lAvailable" type="number" readonly></label><label>Birds Lifted<input id="lQty" type="number" min="0" onchange="updateLiftingStatus()"></label>
 <label>Total Live Weight kg<input id="lWeight" type="number" step=".01"></label><label>Rate / kg<input id="lRate" type="number" step=".01"></label><label>Agent<input id="lAgent"></label>
 <label>Lifted By<select id="lOutletType" onchange="toggleLiftingOutlet()"><option value="Our Outlet">Our Outlet</option><option value="Other Outlet">Other Outlet</option></select></label>
 <label id="lOtherOutletWrap" style="display:none">Other Outlet Name<input id="lOtherOutlet" placeholder="Enter outlet / dealer / buyer name"></label>
@@ -692,6 +717,265 @@ a{color:#8a6b00}
 <div class="panel"><h2>Weekly Sales Target by Chick Type</h2><p class="muted">Set a weekly quantity and sales target separately for each chick type. Actuals are calculated from Commercial Sales orders.</p><div class="grid"><label>Week Starting (Monday)<input id="targetWeek" type="date" onchange="renderWeeklyTargetInputs()"></label></div><div class="tablewrap"><table><thead><tr><th>Chick Type</th><th>Target Qty</th><th>Target Sales (₹)</th></tr></thead><tbody id="weeklyTargetInputs"></tbody></table></div><button class="primary" onclick="saveSalesTarget()">Save Weekly Target</button><div class="tablewrap"><table><thead><tr><th>Week</th><th>Type</th><th>Target Qty</th><th>Actual Qty</th><th>Qty %</th><th>Target Sales</th><th>Actual Sales</th><th>Sales %</th><th>Status</th></tr></thead><tbody id="weeklyTargetRows"></tbody></table></div></div>
 </section>
 
+
+<section id="inventory" class="tab">
+  <div class="panel" id="inventoryManagementTop">
+    <h2>📦 Inventory Management</h2>
+    <p class="muted">Inventory is limited to <b>Feeds</b> and <b>Equipment</b> only.</p>
+
+    <div class="cards">
+      <div class="card"><div class="dash-label">📦 Total Product Types</div><b id="invTotalItems">0</b></div>
+      <div class="card" style="cursor:pointer" onclick="setInventoryFilter('Feeds')"><div class="dash-label">🌾 Feed Types</div><b id="invFeedItems">0</b><small>Total different feed items</small></div>
+      <div class="card" style="cursor:pointer" onclick="setInventoryFilter('Equipment')"><div class="dash-label">🛠️ Equipment Types</div><b id="invEquipmentItems">0</b><small>Total different equipment items</small></div>
+      <div class="card" style="cursor:pointer" onclick="setInventoryFilter('low')"><div class="dash-label">⚠️ Low Stock</div><b id="invLowStock">0</b></div>
+    </div>
+    <div style="margin-top:16px">
+      <h3>🌾 Feed Stock by Type</h3>
+      <div class="cards" id="invFeedTypeStockCards"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3 id="inventoryFormTitle">Add Inventory Item</h3>
+    <div class="grid">
+      <label>Category
+        <select id="invCategory">
+          <option value="Feeds">Feeds</option>
+          <option value="Equipment">Equipment</option>
+        </select>
+      </label>
+      <label>Item Name<input id="invName" placeholder="e.g. Broiler Starter Feed"></label>
+      <label>Unit
+        <select id="invUnit">
+          <option value="Bag">Bag</option>
+          <option value="Kg">Kg</option>
+          <option value="Piece">Piece</option>
+          <option value="Box">Box</option>
+          <option value="Packet">Packet</option>
+        </select>
+      </label>
+      <label>Opening Stock<input id="invOpeningStock" type="number" min="0" step="0.01" value="0"></label>
+      <label>Low Stock Alert At<input id="invLowLevel" type="number" min="0" step="0.01" value="5"></label>
+      <label>Purchase Rate<input id="invPurchaseRate" type="number" min="0" step="0.01" placeholder="₹"></label>
+      <label>Selling Rate<input id="invSellingRate" type="number" min="0" step="0.01" placeholder="₹"></label>
+    </div>
+    <div class="actions">
+      <button class="primary" onclick="saveInventoryItem()">Save Item</button>
+      <button class="secondary" onclick="resetInventoryForm()">Clear</button>
+    </div>
+  </div>
+
+  <div class="panel" id="inventoryLowStockPanel">
+    <h3>⚠️ Low Stock Alerts</h3>
+    <div id="inventoryLowStockAlerts" class="notice">No low-stock items.</div>
+  </div>
+
+  <div class="panel">
+    <h3>Stock Update</h3>
+    <div class="grid">
+      <label>Category
+        <select id="stockCategory" onchange="populateStockUpdateItems()">
+          <option value="">Select Category</option>
+          <option value="Feeds">Feeds</option>
+          <option value="Equipment">Equipment</option>
+        </select>
+      </label>
+      <label>Item
+        <select id="stockItem"><option value="">Select category first</option></select>
+      </label>
+      <label>Update Type
+        <select id="stockAction">
+          <option value="add">Stock In (+)</option>
+          <option value="remove">Stock Out (-)</option>
+          <option value="set">Set Stock (=)</option>
+        </select>
+      </label>
+      <label>Quantity<input id="stockQty" type="number" min="0" step="0.01" placeholder="Quantity"></label>
+      <label>Note<input id="stockNote" placeholder="Optional note"></label>
+    </div>
+    <button class="primary" onclick="updateInventoryStock()">Update Stock</button>
+  </div>
+
+  <div class="panel">
+    <h3>Inventory Items</h3>
+    <div class="grid" style="grid-template-columns:2fr 1fr">
+      <label>Search<input id="inventorySearch" placeholder="Search item..." oninput="renderInventory()"></label>
+      <label>Filter
+        <select id="inventoryFilter" onchange="setInventoryFilter(this.value)">
+          <option value="all">All</option>
+          <option value="Feeds">Feeds</option>
+          <option value="Equipment">Equipment</option>
+          <option value="low">Low Stock Only</option>
+        </select>
+      </label>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th>ID</th><th>Category</th><th>Item</th><th>Unit</th><th>Stock</th><th>Low Alert At</th><th>Status</th><th>Purchase Rate</th><th>Selling Rate</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="inventoryRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <div class="panel">
+    <h3>Recent Stock Updates</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Date & Time</th><th>Category</th><th>Item</th><th>Type</th><th>Qty</th><th>Stock After</th><th>Note</th></tr></thead>
+        <tbody id="inventoryLogRows"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section id="inventoryPOS" class="tab">
+  <div class="panel" id="inventoryPOSTop">
+    <h3>🧾 POS - Inventory Sales</h3>
+    <div class="grid">
+      <label>Customer Name
+        <input id="posCustomerSearch" list="posCustomerList" autocomplete="off" placeholder="Search farmer/customer name" oninput="selectPOSCustomer()">
+        <datalist id="posCustomerList"></datalist>
+        <input id="posCustomer" type="hidden">
+        <input id="posCustomerSource" type="hidden">
+        <input id="posCustomerSourceId" type="hidden">
+      </label>
+      <label>Contact Number<input id="posPhone" placeholder="Optional"></label>
+      <label style="align-self:end"><button type="button" class="secondary" onclick="openPOSNewCustomer()">+ Create New Customer</button></label>
+      <label>Payment Method
+        <select id="posPaymentMethod">
+          <option value="">Select Payment</option>
+          <option value="Cash">Cash</option>
+          <option value="UPI">UPI</option>
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="Credit">Credit</option>
+          <option value="Other">Other</option>
+        </select>
+      </label>
+      <label>Payment Status
+        <select id="posPaymentStatus">
+          <option value="">Select Status</option>
+          <option value="Paid">Paid</option>
+          <option value="Partially Paid">Partially Paid</option>
+          <option value="Unpaid">Unpaid</option>
+        </select>
+      </label>
+      <label>Amount Paid<input id="posAmountPaid" type="number" min="0" step="0.01" value="0" oninput="renderPOSCart()"></label>
+    </div>
+
+
+    <div class="panel" id="posNewCustomerBox" style="margin-top:12px;display:none">
+      <h4>Create New Customer</h4>
+      <div class="grid">
+        <label>Name<input id="posNewCustomerName" placeholder="Customer name"></label>
+        <label>Phone<input id="posNewCustomerPhone" placeholder="Phone number"></label>
+        <label>Address<input id="posNewCustomerAddress" placeholder="Address"></label>
+      </div>
+      <div class="actions">
+        <button type="button" class="primary" onclick="savePOSNewCustomer()">Save Customer</button>
+        <button type="button" class="secondary" onclick="closePOSNewCustomer()">Cancel</button>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <h4>Add Item</h4>
+      <div class="grid">
+        <label>Item
+          <select id="posItem" onchange="syncPOSItemRate()"></select>
+        </label>
+        <label>Quantity<input id="posQty" type="number" min="0.01" step="0.01" value="1"></label>
+        <label>Selling Rate<input id="posRate" type="number" min="0" step="0.01"></label>
+      </div>
+      <button class="secondary" onclick="addPOSToCart()">Add to Cart</button>
+    </div>
+
+    <div class="tablewrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>Item</th><th>Category</th><th>Qty</th><th>Rate</th><th>Total</th><th>Action</th></tr></thead>
+        <tbody id="posCartRows"></tbody>
+      </table>
+    </div>
+
+    <div class="cards">
+      <div class="card"><div class="dash-label">Subtotal</div><b id="posSubtotal">₹0</b></div>
+      <div class="card"><div class="dash-label">Paid</div><b id="posPaid">₹0</b></div>
+      <div class="card"><div class="dash-label">Balance</div><b id="posBalance">₹0</b></div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" onclick="completePOSSale()">Complete Sale</button>
+      <button class="secondary" onclick="clearPOS()">Clear</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>POS Sales History</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Paid</th><th>Balance</th><th>Action</th></tr></thead>
+        <tbody id="posSalesRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+
+
+
+<section id="salesRecords" class="tab">
+  <div class="panel">
+    <h2>📊 Sales Records</h2>
+    <p class="muted">Combined sales records for Chicks, Feeds and Equipment.</p>
+
+    <div class="cards">
+      <div class="card"><div class="dash-label">🐥 Chicks Sales</div><b id="srChicksAmount">₹0</b><small id="srChicksQty">0 chicks</small></div>
+      <div class="card"><div class="dash-label">🌾 Feeds Sales</div><b id="srFeedsAmount">₹0</b><small id="srFeedsQty">0 units</small></div>
+      <div class="card"><div class="dash-label">🛠️ Equipment Sales</div><b id="srEquipmentAmount">₹0</b><small id="srEquipmentQty">0 units</small></div>
+      <div class="card"><div class="dash-label">💰 Total Sales</div><b id="srGrandTotal">₹0</b><small id="srRecordCount">0 records</small></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Filter Sales Records</h3>
+    <div class="grid">
+      <label>From Date<input id="srFromDate" type="date" onchange="renderSalesRecords()"></label>
+      <label>To Date<input id="srToDate" type="date" onchange="renderSalesRecords()"></label>
+      <label>Category
+        <select id="srCategory" onchange="renderSalesRecords()">
+          <option value="All">All Sales</option>
+          <option value="Chicks">Chicks</option>
+          <option value="Feeds">Feeds</option>
+          <option value="Equipment">Equipment</option>
+        </select>
+      </label>
+      <label>Search<input id="srSearch" placeholder="Customer, item, invoice..." oninput="renderSalesRecords()"></label>
+    </div>
+    <div class="actions">
+      <button class="secondary" onclick="setSalesRecordMonth('today')">Today</button>
+      <button class="secondary" onclick="setSalesRecordMonth('month')">This Month</button>
+      <button class="secondary" onclick="clearSalesRecordFilters()">All Time</button>
+      <button class="primary" onclick="printSalesRecords()">Print Sales Report</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Sales Record Details</h3>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th><th>Record ID</th><th>Category</th><th>Customer</th>
+            <th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th>
+            <th>Payment</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="salesRecordRows"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 <section id="reports" class="tab">
 <div class="panel"><h2>Scheduled WhatsApp Chicks Order Report</h2>
 <p class="muted">Recipient: <b>9366618895</b> &nbsp; | &nbsp; Daily report times: <b>12:00 PM</b> and <b>4:00 PM</b>.</p>
@@ -705,7 +989,7 @@ a{color:#8a6b00}
 <div class="panel"><h2>Reports</h2>
 <button class="primary" onclick="printReport('integration')">Print Broiler Integration Report</button>
 <button class="primary" onclick="printReport('sales')">Print Sales Report</button>
-<div class="reportbox" style="margin:10px 0 14px"><h3 style="margin-bottom:6px">Pending Orders by Chick Type</h3><p class="muted" style="margin-top:0">Print or send only pending orders for Broiler, Kuroiler, BV380 Layer, FFFG and other chick types.</p><div class="grid" style="max-width:520px"><label>Chick Type<select id="pendingOrderBreed"><option value="all">All Chick Types</option><option>Broiler</option><option>BV380 Layer</option><option>Kuroiler</option><option>FFFG</option><option>Brahma</option><option>Rainbow Rooster(RR)</option><option>Australorp</option><option>Turkey</option><option>Guinea Fowl</option><option>Kadaknath</option><option>Japanese Quail</option><option>BV300</option><option>Sonali</option><option>RIR</option></select></label></div><div class="actions"><button class="primary" onclick="printPendingOrdersByBreed()">🖨️ Print Pending Orders</button><button class="secondary" onclick="sendPendingOrdersByBreed()">📲 Send Pending Orders</button></div></div>
+<div class="reportbox" style="margin:10px 0 14px"><h3 style="margin-bottom:6px">Pending Orders by Chick Type</h3><p class="muted" style="margin-top:0">Print or send only pending orders for Broiler, Kuroiler, BV380 Layer, FFFG and other chick types.</p><div class="grid" style="max-width:520px"><label>Chick Type<select id="pendingOrderBreed" onclick="refreshPendingOrderBreedOptions()" onfocus="refreshPendingOrderBreedOptions()"><option value="all">All Pending Chick Types</option></select></label></div><div class="actions"><button class="primary" onclick="printPendingOrdersByBreed()">🖨️ Print Pending Orders</button><button class="secondary" onclick="sendPendingOrdersByBreed()">📲 Send Pending Orders</button></div></div>
 <button class="primary" onclick="printOrderStatusSummary('pending')">Print All Pending Orders Report</button>
 <button class="primary" onclick="printOrderStatusSummary('delivered')">Print Delivered Orders Report</button>
 <button class="secondary" onclick="sendOrderStatusSummary('pending')">📲 Send All Pending Orders</button>
@@ -743,16 +1027,16 @@ a{color:#8a6b00}
 const SUPABASE_URL = "https://hzymlcmockvxkyfrbrgh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6eW1sY21vY2t2eGt5ZnJicmdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNzM2MzUsImV4cCI6MjEwMjk0OTYzNX0.QIE_73f-W4oK4snImML9h5tIqaYMdcj9PeqbZv1qrvM";
 let supabaseClient=null, currentUser=null, saveTimer=null, realtimeChannel=null, lastSavedAt=null;
-const DEFAULT_DB={farmers:[],batches:[],followups:[],sales:[],liftings:[],training:[],salesTargets:[]};
+const DEFAULT_DB={farmers:[],batches:[],followups:[],sales:[],liftings:[],training:[],salesTargets:[],inventory:[],inventoryLogs:[],posSales:[],posCustomers:[]};
 let db=structuredClone(DEFAULT_DB);
-let edit={farmer:null,batch:null,follow:null,sale:null,lift:null,training:null};
+let edit={farmer:null,batch:null,follow:null,sale:null,lift:null,training:null,inventory:null};
 const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
 const money=n=>"₹"+Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:2});
 const makeId=(p,n)=>p+String(n).padStart(5,"0");
 
 function normalizeDb(data={}){
   const d={...structuredClone(DEFAULT_DB),...data};
-  d.training=d.training||[]; d.salesTargets=d.salesTargets||[];
+  d.training=d.training||[]; d.salesTargets=d.salesTargets||[]; d.inventory=d.inventory||[]; d.inventoryLogs=d.inventoryLogs||[]; d.posSales=d.posSales||[]; d.posCustomers=d.posCustomers||[];
   d.followups=(d.followups||[]).map(x=>({...x,week:Number(x.week||Math.min(6,Math.max(1,Math.ceil(age(batch(x.batch)?.date||x.date)/7))))}));
   d.farmers=(d.farmers||[]).map(f=>({...f,address:f.address||f.village||"",farmLocation:f.farmLocation||f.farm||""}));
   return d;
@@ -774,7 +1058,7 @@ function save(){
     const {error}=await supabaseClient.from("mpf_app_state").upsert({owner_id:currentUser.id,data:db,updated_at:lastSavedAt});
     if(error){console.error(error);alert("Cloud save failed: "+error.message)}
   },350);
-}
+;if(typeof refreshPendingOrderBreedOptions==="function")refreshPendingOrderBreedOptions()}
 function subscribeRealtime(){
   if(!cloudReady()||!currentUser||realtimeChannel) return;
   realtimeChannel=supabaseClient
@@ -889,9 +1173,12 @@ function goToEntry(tabId,fieldId){
 }
 function checkFilterBatches(){let fid=$('checkFarmer').value;let bs=db.batches.filter(b=>!fid||b.farmer===fid);$('checkBatch').innerHTML='<option value="all">All Batches</option>'+bs.map(b=>`<option value="${b.id}">${b.id} - ${b.breed}</option>`).join('')}
 function showFollowupReport(){let f=$('checkFarmer').value,bid=$('checkBatch').value,w=$('checkWeek').value;let rows=db.followups.filter(x=>(!f||x.farmer===f)&&(!bid||bid==='all'||x.batch===bid)&&(w==='all'||String(x.week)===w));$('followupReport').style.display='block';$('followupReport').innerHTML=rows.length?`<table><thead><tr><th>Farmer</th><th>Week</th><th>Batch</th><th>Date</th><th>Mortality</th><th>Weight</th><th>Water</th><th>Vaccination</th><th>Health</th><th>Remarks</th></tr></thead><tbody>${rows.sort((a,b)=>a.week-b.week).map(x=>`<tr><td>${farmerName(x.farmer)}</td><td>Week ${x.week}</td><td>${x.batch}</td><td>${x.date}</td><td>${x.mort}</td><td>${x.weight||'-'}</td><td>${x.water||'-'}</td><td>${x.vacc||'-'} / ${x.vaccStatus||'-'}</td><td>${x.health}</td><td>${x.remarks||''}</td></tr>`).join('')}</tbody></table>`:'<span class="muted">No follow-up records found.</span>'}
-function saveFarmer(){let name=$('fName').value.trim();if(!name)return alert('Enter farmer name');let obj={name,phone:$('fPhone').value,address:$('fAddress').value,district:$('fDistrict').value,farmLocation:$('fFarmLocation').value,sheds:Number($('fSheds').value||0),capacity:Number($('fCapacity').value||0),staff:$('fStaff').value,liftingType:$('fLiftingType').value||'Lifting',reared:$('fReared').value,prevCapacity:Number($('fPrevCapacity').value||0),partner:$('fPartner').value,farmingType:$('fFarmingType').value,prevFeed:$('fPrevFeed').value,prevChicks:$('fPrevChicks').value,remarks:$('fRemarks').value};if(edit.farmer){Object.assign(farmer(edit.farmer),obj);edit.farmer=null;$('farmerSave').textContent='Save Farmer'}else{obj.id=makeId('F',db.farmers.length+1);obj.created=today();obj.createdAt=Date.now();db.farmers.push(obj)}resetForm('', ['fName','fPhone','fAddress','fFarmLocation','fSheds','fCapacity','fStaff','fPrevCapacity','fPartner','fPrevFeed','fPrevChicks','fRemarks']);$('fDistrict').value='Imphal East';$('fLiftingType').value='Lifting';$('fReared').value='No';toggleFarmerHistory();save()}
-function renderFarmers(q='',page){pageState.farmers_q=q;let a=db.farmers.map((f,i)=>({f,i})).filter(z=>(z.f.name+' '+z.f.phone+' '+z.f.address+' '+z.f.farmLocation+' '+z.f.district).toLowerCase().includes((q||'').toLowerCase())).sort((a,b)=>(Number(b.f.createdAt||0)-Number(a.f.createdAt||0))||(b.i-a.i)).map(z=>z.f);paged('farmers',a,'farmerRows',f=>`<tr><td>${f.id}</td><td>${f.name}</td><td>${f.phone}</td><td>${f.address||''}</td><td>${f.district||''}</td><td>${f.farmLocation||''}</td><td>${f.sheds||0}</td><td>${f.capacity||0}</td><td>${f.staff||''}</td><td><b>${f.liftingType||'Lifting'}</b></td><td class="actions"><button class="secondary" onclick="editFarmer('${f.id}')">Edit</button><button class="secondary" onclick="printFarmerReport('${f.id}')">Farmer Report</button><button class="secondary" onclick="whatsappFarmerReport('${f.id}')">WhatsApp</button><button class="danger" onclick="delFarmer('${f.id}')">Delete</button></td></tr>`,page)}
-function editFarmer(id){let f=farmer(id);if(!f)return;$('fName').value=f.name||'';$('fPhone').value=f.phone||'';$('fAddress').value=f.address||f.village||'';$('fDistrict').value=f.district||'Imphal East';$('fFarmLocation').value=f.farmLocation||f.farm||'';$('fSheds').value=f.sheds||0;$('fCapacity').value=f.capacity||0;$('fStaff').value=f.staff||'';$('fLiftingType').value=f.liftingType||'Lifting';$('fReared').value=f.reared||'No';$('fPrevCapacity').value=f.prevCapacity||'';$('fPartner').value=f.partner||'';$('fFarmingType').value=f.farmingType||'Contract';$('fPrevFeed').value=f.prevFeed||'';$('fPrevChicks').value=f.prevChicks||'';$('fRemarks').value=f.remarks||'';toggleFarmerHistory();edit.farmer=id;$('farmerSave').textContent='Update Farmer';goToEntry('farmers','fName')}
+function saveFarmer(){let name=$('fName').value.trim();if(!name)return alert('Enter farmer name');let obj={name,phone:$('fPhone').value,address:$('fAddress').value,district:$('fDistrict').value,farmLocation:$('fFarmLocation').value,sheds:Number($('fSheds').value||0),capacity:Number($('fCapacity').value||0),staff:$('fStaff').value,status:$('fStatus').value||'Active',liftingType:$('fLiftingType').value||'Lifting',reared:$('fReared').value,prevCapacity:Number($('fPrevCapacity').value||0),partner:$('fPartner').value,farmingType:$('fFarmingType').value,prevFeed:$('fPrevFeed').value,prevChicks:$('fPrevChicks').value,remarks:$('fRemarks').value};if(edit.farmer){Object.assign(farmer(edit.farmer),obj);edit.farmer=null;$('farmerSave').textContent='Save Farmer'}else{obj.id=makeId('F',db.farmers.length+1);obj.created=today();obj.createdAt=Date.now();db.farmers.push(obj)}resetForm('', ['fName','fPhone','fAddress','fFarmLocation','fSheds','fCapacity','fStaff','fPrevCapacity','fPartner','fPrevFeed','fPrevChicks','fRemarks']);$('fDistrict').value='Imphal East';$('fStatus').value='Active';$('fLiftingType').value='Lifting';$('fReared').value='No';toggleFarmerHistory();save()}
+let farmerListStatus='All';
+function setFarmerStatusFilter(status){farmerListStatus=status||'All';if($('farmerStatusFilter'))$('farmerStatusFilter').value=farmerListStatus;renderFarmers($('farmerSearchBox')?.value||'')}
+function openFarmersByStatus(status){farmerListStatus=status||'All';goToEntry('farmers','fName');setTimeout(()=>{if($('farmerStatusFilter'))$('farmerStatusFilter').value=farmerListStatus;if($('farmerSearchBox'))$('farmerSearchBox').value='';renderFarmers('')},50)}
+function renderFarmers(q='',page){pageState.farmers_q=q;let a=db.farmers.map((f,i)=>({f,i})).filter(z=>farmerListStatus==='All'||(z.f.status||'Active')===farmerListStatus).filter(z=>(z.f.name+' '+z.f.phone+' '+z.f.address+' '+z.f.farmLocation+' '+z.f.district+' '+(z.f.status||'Active')).toLowerCase().includes((q||'').toLowerCase())).sort((a,b)=>(Number(b.f.createdAt||0)-Number(a.f.createdAt||0))||(b.i-a.i)).map(z=>z.f);paged('farmers',a,'farmerRows',f=>`<tr><td>${f.id}</td><td>${f.name}</td><td><b>${f.status||'Active'}</b></td><td>${f.phone}</td><td>${f.address||''}</td><td>${f.district||''}</td><td>${f.farmLocation||''}</td><td>${f.sheds||0}</td><td>${f.capacity||0}</td><td>${f.staff||''}</td><td><b>${f.liftingType||'Lifting'}</b></td><td class="actions"><button class="secondary" onclick="editFarmer('${f.id}')">Edit</button><button class="secondary" onclick="printFarmerReport('${f.id}')">Farmer Report</button><button class="secondary" onclick="whatsappFarmerReport('${f.id}')">WhatsApp</button><button class="danger" onclick="delFarmer('${f.id}')">Delete</button></td></tr>`,page)}
+function editFarmer(id){let f=farmer(id);if(!f)return;$('fName').value=f.name||'';$('fPhone').value=f.phone||'';$('fAddress').value=f.address||f.village||'';$('fDistrict').value=f.district||'Imphal East';$('fFarmLocation').value=f.farmLocation||f.farm||'';$('fSheds').value=f.sheds||0;$('fCapacity').value=f.capacity||0;$('fStaff').value=f.staff||'';$('fStatus').value=f.status||'Active';$('fLiftingType').value=f.liftingType||'Lifting';$('fReared').value=f.reared||'No';$('fPrevCapacity').value=f.prevCapacity||'';$('fPartner').value=f.partner||'';$('fFarmingType').value=f.farmingType||'Contract';$('fPrevFeed').value=f.prevFeed||'';$('fPrevChicks').value=f.prevChicks||'';$('fRemarks').value=f.remarks||'';toggleFarmerHistory();edit.farmer=id;$('farmerSave').textContent='Update Farmer';goToEntry('farmers','fName')}
 function delFarmer(id){if(confirm('Delete farmer and linked batches?')){db.farmers=db.farmers.filter(x=>x.id!==id);save()}}
 function formatDatePlus(d,n){let x=new Date(d+'T00:00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)}
 function saveBatch(){validateFarmerSearch('bFarmerSearch','bFarmer');if(!$('bFarmer').value)return alert('Please select a farmer name from the list');let farmerId=$('bFarmer').value,date=$('bDate').value;if(!date)return alert('Select placement date');let obj={farmer:farmerId,date,qty:Number($('bQty').value||0),breed:$('bBreed').value,rate:Number($('bRate').value||0),lift:formatDatePlus(date,42),preStarter:Number($('bPreStarter').value||0),starter:Number($('bStarter').value||0),finisher:Number($('bFinisher').value||0),health:$('bHealth').value,staff:$('bStaff').value,remarks:$('bRemarks').value,status:'Active'};if(!obj.qty)return alert('Enter chicks placed');if(edit.batch){obj.id=edit.batch;Object.assign(batch(edit.batch),obj);edit.batch=null;$('batchSave').textContent='Save Batch'}else{let n=db.batches.filter(x=>x.farmer===farmerId).length+1;obj.id='BLR-'+farmerId+'-'+String(n).padStart(3,'0');while(batch(obj.id))n++,obj.id='BLR-'+farmerId+'-'+String(n).padStart(3,'0');obj.createdAt=Date.now();db.batches.push(obj)}resetForm('', ['bQty','bRate','bPreStarter','bStarter','bFinisher','bStaff','bRemarks']);save()}
@@ -985,6 +1272,20 @@ function printOrderStatusReport(id){
     ]
   );
 }
+function refreshPendingOrderBreedOptions(){
+  const el=$("pendingOrderBreed");
+  if(!el)return;
+  const current=el.value||"all";
+  const types=[...new Set(
+    db.sales
+      .filter(x=>x.status==="Pending")
+      .map(x=>saleBreed(x))
+      .filter(Boolean)
+  )].sort((a,b)=>a.localeCompare(b));
+  el.innerHTML='<option value="all">All Pending Chick Types</option>'+
+    types.map(t=>`<option value="${reportEscape(t)}">${reportEscape(t)}</option>`).join('');
+  el.value=types.includes(current)||current==="all"?current:"all";
+}
 function pendingOrdersForBreed(){
   const el=$("pendingOrderBreed");
   const selected=el?el.value:"all";
@@ -998,8 +1299,8 @@ function printPendingOrdersByBreed(){
   const totalQty=orders.reduce((n,x)=>n+Number(x.qty||0),0);
   const total=orders.reduce((n,x)=>n+Number(x.total||0),0);
   const advance=orders.reduce((n,x)=>n+Number(x.advance||0),0);
-  const rows=orders.map(x=>[x.id,x.date||"-",x.name||"-",x.phone||"-",x.address||"-",saleBreed(x),x.qty||0,money(x.total||0),money(x.advance||0),money(Math.max(0,(x.total||0)-(x.advance||0))),x.deliveryDate||"-"]);
-  openDetailedReport(`Pending Orders - ${label}`,[['Chick Type',label],['Pending Orders',orders.length],['Total Chicks',totalQty],['Order Value',money(total)],['Outstanding',money(Math.max(0,total-advance))]],['Order ID','Date','Customer','Contact','Address','Product / Breed','Qty','Total','Advance','Outstanding','Delivery Date'],rows);
+  const rows=orders.map(x=>[x.id,x.date||"-",x.name||"-",x.phone||"-",x.address||"-",saleBreed(x),x.qty||0,money(x.rate||0),money(x.total||0),money(x.advance||0),money(Math.max(0,(x.total||0)-(x.advance||0))),x.deliveryDate||"-"]);
+  openDetailedReport(`Pending Orders - ${label}`,[['Chick Type',label],['Pending Orders',orders.length],['Total Chicks',totalQty],['Order Value',money(total)],['Outstanding',money(Math.max(0,total-advance))]],['Order ID','Date','Customer','Contact','Address','Product / Breed','Qty','Chicks Rate','Total','Advance','Outstanding','Delivery Date'],rows);
 }
 function sendPendingOrdersByBreed(){
   const el=$("pendingOrderBreed"), selected=el?el.value:"all";
@@ -1020,7 +1321,7 @@ function sendPendingOrdersByBreed(){
   const total=orders.reduce((n,x)=>n+Number(x.total||0),0);
   const advance=orders.reduce((n,x)=>n+Number(x.advance||0),0);
   let msg=`Manipur Poultry Farm\nPending Orders - ${label}\n\nPending Orders: ${orders.length}\nTotal Chicks: ${totalQty}\nOrder Value: ${money(total)}\nAdvance Received: ${money(advance)}\nOutstanding: ${money(Math.max(0,total-advance))}\n\n`;
-  orders.forEach((x,i)=>{msg+=`${i+1}. ${x.id} | ${x.name||'-'} | ${x.phone||'-'}\n   ${saleBreed(x)} | Qty: ${x.qty||0} | Total: ${money(x.total||0)} | Delivery Date: ${x.deliveryDate||'-'}\n`;});
+  orders.forEach((x,i)=>{msg+=`${i+1}. ${x.id} | ${x.name||'-'} | ${x.phone||'-'}\n   ${saleBreed(x)} | Qty: ${x.qty||0} | Rate: ${money(x.rate||0)} | Total: ${money(x.total||0)} | Delivery Date: ${x.deliveryDate||'-'}\n`;});
   msg+='\nManipur Poultry Farm';
   whatsapp(SCHEDULE_PHONE,msg);
 }
@@ -1031,8 +1332,8 @@ function printOrderStatusSummary(type){
   const totalQty=orders.reduce((n,x)=>n+Number(x.qty||0),0);
   const total=orders.reduce((n,x)=>n+Number(x.total||0),0);
   const advance=orders.reduce((n,x)=>n+Number(x.advance||0),0);
-  const rows=orders.map(x=>[x.id,x.date||'-',x.name||'-',x.phone||'-',x.address||'-',saleBreed(x),x.qty||0,money(x.total||0),money(x.advance||0),money(Math.max(0,(x.total||0)-(x.advance||0))),x.deliveryDate||'-']);
-  openDetailedReport(`${label} Orders Report`,[['Orders',orders.length],['Total Chicks',totalQty],['Order Value',money(total)],['Outstanding',money(Math.max(0,total-advance))]],['Order ID','Date','Customer','Contact','Address','Product / Breed','Qty','Total','Advance','Outstanding','Delivery Date'],rows);
+  const rows=orders.map(x=>[x.id,x.date||'-',x.name||'-',x.phone||'-',x.address||'-',saleBreed(x),x.qty||0,money(x.rate||0),money(x.total||0),money(x.advance||0),money(Math.max(0,(x.total||0)-(x.advance||0))),x.deliveryDate||'-']);
+  openDetailedReport(`${label} Orders Report`,[['Orders',orders.length],['Total Chicks',totalQty],['Order Value',money(total)],['Outstanding',money(Math.max(0,total-advance))]],['Order ID','Date','Customer','Contact','Address','Product / Breed','Qty','Chicks Rate','Total','Advance','Outstanding','Delivery Date'],rows);
 }
 function sendOrderStatusSummary(type){
   const status=type==='pending'?'Pending':'Complete';
@@ -1044,7 +1345,7 @@ function sendOrderStatusSummary(type){
   const advance=orders.reduce((n,x)=>n+Number(x.advance||0),0);
   let msg=`Manipur Poultry Farm\n${label} Orders Report\n\nOrders: ${orders.length}\nTotal Chicks: ${totalQty}\nOrder Value: ${money(total)}\nAdvance Received: ${money(advance)}\nOutstanding: ${money(Math.max(0,total-advance))}\n\n`;
   orders.forEach((x,i)=>{
-    msg+=`${i+1}. ${x.id} | ${x.name||'-'} | ${x.phone||'-'}\n   ${saleBreed(x)} | Qty: ${x.qty||0} | Total: ${money(x.total||0)} | Delivery Date: ${x.deliveryDate||'-'}\n`;
+    msg+=`${i+1}. ${x.id} | ${x.name||'-'} | ${x.phone||'-'}\n   ${saleBreed(x)} | Qty: ${x.qty||0} | Rate: ${money(x.rate||0)} | Total: ${money(x.total||0)} | Delivery Date: ${x.deliveryDate||'-'}\n`;
   });
   msg+='\nThank you.\nManipur Poultry Farm';
   whatsapp(SCHEDULE_PHONE,msg);
@@ -1064,7 +1365,7 @@ function totalMortality(batchId){return db.followups.filter(x=>x.batch===batchId
 function liftedQty(batchId,excludeIndex=null){return db.liftings.reduce((n,x,i)=>n+(x.batch===batchId&&["Partially Completed","Completed"].includes(String(x.status||""))&&i!==excludeIndex?Number(x.qty||0):0),0)}
 function birdsAvailable(batchId,excludeIndex=null){let b=batch(batchId);if(!b)return 0;return Math.max(0,Number(b.qty||0)-totalMortality(batchId)-liftedQty(batchId,excludeIndex))}
 function liftingAge(batchId,date){let b=batch(batchId);if(!b||!b.date||!date)return 0;return Math.max(0,Math.floor((new Date(date+"T00:00:00")-new Date(b.date+"T00:00:00"))/86400000))}
-function updateLiftingAuto(syncFarmer=true){let id=$("lBatch").value;if(!id)return;let b=batch(id),a=birdsAvailable(id,edit.lift!==null?edit.lift:null);$("lFarmer").value=b?.farmer||"";if(syncFarmer&&b?.farmer)setFarmerSearch('lFarmerSearch',b.farmer);$("lAge").value=liftingAge(id,$("lDate").value||today());$("lAvailable").value=a;updateLiftingStatus()}
+function updateLiftingAuto(syncFarmer=true){let id=$("lBatch").value;if(!id)return;setLiftingBatchSearch(id);let b=batch(id),a=birdsAvailable(id,edit.lift!==null?edit.lift:null);$("lFarmer").value=b?.farmer||"";if(syncFarmer&&b?.farmer)setFarmerSearch('lFarmerSearch',b.farmer);$("lAge").value=liftingAge(id,$("lDate").value||today());$("lAvailable").value=a;updateLiftingStatus()}
 function toggleLiftingConfirmDate(){let wrap=$("lConfirmDateWrap");if(wrap)wrap.style.display=$("lStatus").value==="Scheduled"?"":"none";}
 function updateLiftingStatus(){let a=Number($("lAvailable").value||0),q=Number($("lQty").value||0),st=$("lStatus").value;if(st==="Scheduled"){toggleLiftingConfirmDate();return;}if(q<=0)$("lStatus").value="Scheduled";else if(q<a)$("lStatus").value="Partially Completed";else $("lStatus").value="Completed";toggleLiftingConfirmDate();}
 function toggleLiftingOutlet(){
@@ -1084,8 +1385,8 @@ function sendScheduledLiftingDetails(index){
   whatsapp("7005215398",msg);
   x.sendCount=Number(x.sendCount||0)+1; x.lastSentAt=new Date().toISOString(); save();
 }
-function renderLifting(page){let all=db.liftings.map((x,i)=>({x,i}));let counts={Scheduled:0,"Partially Completed":0,Completed:0,Cancelled:0};all.forEach(z=>{if(counts[z.x.status]!==undefined)counts[z.x.status]++});["liftCountAll","liftCountScheduled","liftCountPartial","liftCountCompleted","liftCountCancelled"].forEach(id=>{if($(id))$(id).textContent=id==="liftCountScheduled"?counts.Scheduled:id==="liftCountPartial"?counts["Partially Completed"]:id==="liftCountCompleted"?counts.Completed:counts.Cancelled});let fid=moduleFarmerFilters.lifting||"";let a=all.filter(z=>z.x.status===liftingFilter&&farmerFilterMatch(z.x.farmer||batch(z.x.batch)?.farmer,fid));paged("lifting",a,"liftRows",z=>{let x=z.x,i=z.i,b=batch(x.batch),available=Number(x.available??birdsAvailable(x.batch,i)),lifted=Number(x.qty||0),remaining=Math.max(0,available-lifted);return `<tr><td>${x.date}</td><td>${x.confirmDate||"-"}</td><td>${x.batch}</td><td>${farmerName(x.farmer||b?.farmer)}</td><td>${available}</td><td>${lifted}</td><td><b>${remaining}</b></td><td>${x.age??liftingAge(x.batch,x.date)}</td><td>${x.weight||0}</td><td>${money(x.rate)}</td><td>${money(x.total)}</td><td>${x.agent||""}</td><td>${x.outletType||"Our Outlet"}</td><td>${(x.outletType==="Other Outlet"?(x.otherOutlet||"-"):"-")}</td><td>${x.vehicle||""}</td><td><b>${x.status}</b></td><td class="actions"><button class="secondary" onclick="editLift(${i})">Edit</button>${x.status==="Scheduled"?`<button class="secondary" onclick="sendScheduledLiftingDetails(${i})">Send Details${x.sendCount?` (${x.sendCount})`:""}</button>`:""}<button class="danger" onclick="delLift(${i})">Delete</button></td></tr>`},page)}
-function editLift(i){let x=db.liftings[i];$("lBatch").value=x.batch;fillLiftingFarmer();$("lFarmer").value=x.farmer||batch(x.batch)?.farmer||"";setFarmerSearch('lFarmerSearch',$("lFarmer").value);$("lDate").value=x.date;$("lConfirmDate").value=x.confirmDate||"";$("lAge").value=x.age??liftingAge(x.batch,x.date);$("lAvailable").value=x.available??birdsAvailable(x.batch,i);$("lQty").value=x.qty||0;$("lWeight").value=x.weight||0;$("lRate").value=x.rate||0;$("lAgent").value=x.agent||"";$("lOutletType").value=x.outletType||"Our Outlet";$("lOtherOutlet").value=x.otherOutlet||"";toggleLiftingOutlet();$("lVehicle").value=x.vehicle||"";$("lStatus").value=x.status||"Scheduled";toggleLiftingConfirmDate();edit.lift=i;$("liftSave").textContent="Update Lifting";goToEntry('lifting','lBatch')}
+function renderLifting(page){let all=db.liftings.map((x,i)=>({x,i}));let ourAll=all.filter(z=>(z.x.outletType||'Our Outlet')!=='Other Outlet');let counts={Scheduled:0,"Partially Completed":0,Completed:0,Cancelled:0};ourAll.forEach(z=>{if(counts[z.x.status]!==undefined)counts[z.x.status]++});["liftCountAll","liftCountScheduled","liftCountPartial","liftCountCompleted","liftCountCancelled"].forEach(id=>{if($(id))$(id).textContent=id==="liftCountScheduled"?counts.Scheduled:id==="liftCountPartial"?counts["Partially Completed"]:id==="liftCountCompleted"?counts.Completed:counts.Cancelled});let fid=moduleFarmerFilters.lifting||"";let a=all.filter(z=>z.x.status===liftingFilter&&farmerFilterMatch(z.x.farmer||batch(z.x.batch)?.farmer,fid));paged("lifting",a,"liftRows",z=>{let x=z.x,i=z.i,b=batch(x.batch),available=Number(x.available??birdsAvailable(x.batch,i)),lifted=Number(x.qty||0),remaining=Math.max(0,available-lifted);return `<tr><td>${x.date}</td><td>${x.confirmDate||"-"}</td><td>${x.batch}</td><td>${farmerName(x.farmer||b?.farmer)}</td><td>${available}</td><td>${lifted}</td><td><b>${remaining}</b></td><td>${x.age??liftingAge(x.batch,x.date)}</td><td>${x.weight||0}</td><td>${money(x.rate)}</td><td>${money(x.total)}</td><td>${x.agent||""}</td><td>${x.outletType||"Our Outlet"}</td><td>${(x.outletType==="Other Outlet"?(x.otherOutlet||"-"):"-")}</td><td>${x.vehicle||""}</td><td><b>${x.status}</b></td><td class="actions"><button class="secondary" onclick="editLift(${i})">Edit</button>${x.status==="Scheduled"?`<button class="secondary" onclick="sendScheduledLiftingDetails(${i})">Send Details${x.sendCount?` (${x.sendCount})`:""}</button>`:""}<button class="danger" onclick="delLift(${i})">Delete</button></td></tr>`},page)}
+function editLift(i){let x=db.liftings[i];$("lBatch").value=x.batch;setLiftingBatchSearch(x.batch);fillLiftingFarmer();$("lFarmer").value=x.farmer||batch(x.batch)?.farmer||"";setFarmerSearch('lFarmerSearch',$("lFarmer").value);$("lDate").value=x.date;$("lConfirmDate").value=x.confirmDate||"";$("lAge").value=x.age??liftingAge(x.batch,x.date);$("lAvailable").value=x.available??birdsAvailable(x.batch,i);$("lQty").value=x.qty||0;$("lWeight").value=x.weight||0;$("lRate").value=x.rate||0;$("lAgent").value=x.agent||"";$("lOutletType").value=x.outletType||"Our Outlet";$("lOtherOutlet").value=x.otherOutlet||"";toggleLiftingOutlet();$("lVehicle").value=x.vehicle||"";$("lStatus").value=x.status||"Scheduled";toggleLiftingConfirmDate();edit.lift=i;$("liftSave").textContent="Update Lifting";goToEntry('lifting','lBatch')}
 function delLift(i){if(confirm("Delete lifting record?")){db.liftings.splice(i,1);save()}}
 let farmerSearchIndex=null;
 let farmerSearchDropdown=null;
@@ -1203,14 +1504,63 @@ function validateCustomerSearch(){
   if(exact){input.value=exact.name; if($('sPhone'))$('sPhone').value=exact.phone||''; if($('sAddress'))$('sAddress').value=exact.address||'';return true;}
   input.value='';alert('Please select a customer name from the list.');return false;
 }
+function liftingBatchLabel(x){
+  return `${x.id} - ${farmerName(x.farmer)} - ${x.breed||'Broiler'}`;
+}
+function setLiftingBatchSearch(batchId){
+  const b=batch(batchId);
+  if($('lBatchSearch')) $('lBatchSearch').value=b?liftingBatchLabel(b):'';
+}
+function selectLiftingBatch(){
+  const input=$('lBatchSearch'), sel=$('lBatch');
+  if(!input||!sel)return;
+  const term=input.value.trim().toLowerCase();
+  if(!term){sel.value='';return;}
+  const fid=$('lFarmer')?.value||'';
+  const list=db.batches.filter(b=>farmerIsLifting(farmer(b.farmer))&&(!fid||b.farmer===fid));
+  const found=list.find(b=>{
+    const label=liftingBatchLabel(b).toLowerCase();
+    return String(b.id).toLowerCase()===term || label===term;
+  });
+  if(found){
+    sel.value=found.id;
+    updateLiftingAuto();
+  }
+}
+function validateLiftingBatchSearch(){
+  const input=$('lBatchSearch'), sel=$('lBatch');
+  if(!input||!sel)return true;
+  const term=input.value.trim();
+  if(!term){sel.value='';return true;}
+  const fid=$('lFarmer')?.value||'';
+  const list=db.batches.filter(b=>farmerIsLifting(farmer(b.farmer))&&(!fid||b.farmer===fid));
+  const low=term.toLowerCase();
+  const found=list.find(b=>String(b.id).toLowerCase()===low || liftingBatchLabel(b).toLowerCase()===low);
+  if(found){
+    sel.value=found.id;
+    setLiftingBatchSearch(found.id);
+    updateLiftingAuto();
+    return true;
+  }
+  input.value='';
+  sel.value='';
+  alert('Please select a batch from the search list.');
+  return false;
+}
 function filterLiftingBatchesByFarmer(syncFarmer=true){
   let fid=$('lFarmer')?.value||'';
   let current=$('lBatch')?.value||'';
   let list=db.batches.filter(b=>farmerIsLifting(farmer(b.farmer))&&(!fid||b.farmer===fid));
-  $('lBatch').innerHTML=list.map(x=>`<option value="${x.id}">${x.id} - ${farmerName(x.farmer)} - ${x.breed||'Broiler'}</option>`).join('');
+  $('lBatch').innerHTML='<option value=""></option>'+list.map(x=>`<option value="${x.id}">${liftingBatchLabel(x)}</option>`).join('');
+  if($('lBatchList')) $('lBatchList').innerHTML=list.map(x=>`<option value="${liftingBatchLabel(x).replace(/"/g,'&quot;')}"></option>`).join('');
   if(list.some(x=>x.id===current)) $('lBatch').value=current;
-  else if(list.length) $('lBatch').value=list[0].id;
-  updateLiftingAuto(syncFarmer);
+  else $('lBatch').value='';
+  setLiftingBatchSearch($('lBatch').value);
+  if($('lBatch').value) updateLiftingAuto(syncFarmer);
+  else {
+    if($('lAge')) $('lAge').value='';
+    if($('lAvailable')) $('lAvailable').value='';
+  }
 }
 function selectLiftingFarmer(){
   selectFarmerFromSearch('lFarmerSearch','lFarmer');
@@ -1221,8 +1571,14 @@ function fillSelects(){
   populateSearchLists();
   // Do not create one <option> per farmer. This keeps the UI responsive even with 100,000+ farmers.
   filterFollowBatches();
-  let b=db.batches.filter(x=>farmerIsLifting(farmer(x.farmer))).map(x=>`<option value="${x.id}">${x.id} - ${farmerName(x.farmer)}</option>`).join("");
-  $("lBatch").innerHTML=b;
+  let liftingBatches=db.batches.filter(x=>farmerIsLifting(farmer(x.farmer)));
+  let b=liftingBatches.map(x=>`<option value="${x.id}">${liftingBatchLabel(x)}</option>`).join("");
+  $("lBatch").innerHTML='<option value=""></option>'+b;
+  $("lBatch").value='';
+  if($("lBatchList"))$("lBatchList").innerHTML=liftingBatches.map(x=>`<option value="${liftingBatchLabel(x).replace(/"/g,'&quot;')}"></option>`).join("");
+  if($("lBatchSearch"))$("lBatchSearch").value='';
+  if($("lFarmer"))$("lFarmer").value='';
+  if($("lFarmerSearch"))$("lFarmerSearch").value='';
   if($("uBatch").options.length===0)$("uBatch").innerHTML=b;
   if($("lDate"))$("lDate").value=$("lDate").value||today();
   toggleLiftingConfirmDate();
@@ -1268,9 +1624,10 @@ function renderFarmerFollowupReminders(active){
  }).join("")}</tbody></table>`:`<div class="notice">No active farmer batch is currently in a follow-up window (5–7, 13–15, 20–22, 26–28 or 34–36 days).</div>`;
 }
 function renderDashboard(){
+let ourLiftings=db.liftings.filter(x=>(x.outletType||'Our Outlet')!=='Other Outlet');
  renderVaccinationReminders();checkVaccinationNotifications();
 let active=db.batches.filter(x=>x.status==="Active");
-$("dFarmers").textContent=db.farmers.length;$("dBatches").textContent=active.length;$("dBirds").textContent=active.reduce((s,x)=>s+Number(x.qty||0),0);$("dAlerts").textContent=db.followups.filter(x=>x.health==="Yes").length;$("dOrders").textContent=db.sales.length;$("dSales").textContent=money(db.sales.reduce((s,x)=>s+Number(x.total||0),0));$("dAdvance").textContent=money(db.sales.reduce((s,x)=>s+Number(x.advance||0),0));$("dTrainees").textContent=db.training.length;$("dCertificates").textContent=db.training.filter(x=>x.certificate==="Yes").length;$("dTrainingFees").textContent=money(db.training.reduce((s,x)=>s+Number(x.fee||0),0));$("dOutstanding").textContent=money(db.sales.filter(x=>x.status!=="Cancelled").reduce((s,x)=>s+Math.max(0,Number(x.total||0)-Number(x.advance||0)),0));
+$("dFarmers").textContent=db.farmers.length;if($("dActiveFarmers"))$("dActiveFarmers").textContent=db.farmers.filter(f=>(f.status||'Active')==='Active').length;if($("dInactiveFarmers"))$("dInactiveFarmers").textContent=db.farmers.filter(f=>(f.status||'Active')==='Inactive').length;$("dBatches").textContent=active.length;$("dBirds").textContent=active.reduce((s,x)=>s+Number(x.qty||0),0);$("dAlerts").textContent=db.followups.filter(x=>x.health==="Yes").length;$("dOrders").textContent=db.sales.length;$("dSales").textContent=money(db.sales.reduce((s,x)=>s+Number(x.total||0),0));$("dAdvance").textContent=money(db.sales.reduce((s,x)=>s+Number(x.advance||0),0));$("dTrainees").textContent=db.training.length;$("dCertificates").textContent=db.training.filter(x=>x.certificate==="Yes").length;$("dTrainingFees").textContent=money(db.training.reduce((s,x)=>s+Number(x.fee||0),0));$("dOutstanding").textContent=money(db.sales.filter(x=>x.status!=="Cancelled").reduce((s,x)=>s+Math.max(0,Number(x.total||0)-Number(x.advance||0)),0));
 const recentOrders=db.sales.slice().sort((a,b)=>(Number(b.createdAt||0)-Number(a.createdAt||0))).slice(0,20);
 const typeOrder=['Broiler','BV380 Layer','Kuroiler','FFFG','Brahma','Rainbow Rooster(RR)','Australorp','Turkey','Guinea Fowl','Kadaknath','Japanese Quail','BV300','Sonali','RIR'];
 const groupedTypes=[...typeOrder,...[...new Set(recentOrders.map(o=>saleBreed(o)))].filter(t=>!typeOrder.includes(t))];
@@ -1282,7 +1639,7 @@ $("recentSales").innerHTML=groupedTypes.map(type=>{
     orders.map(o=>`<tr><td>${o.id}</td><td>${o.date}</td><td>${o.name}</td><td><b>${escapeHtml(saleBreed(o))}</b></td><td><b>${Number(o.qty||0).toLocaleString("en-IN")}</b></td><td>${money(o.total)}</td><td>${money(o.advance)}</td><td>${money(Math.max(0,o.total-o.advance))}</td></tr>`).join('');
 }).join('') || `<tr><td colspan="8" class="muted">No commercial orders yet.</td></tr>`;
 renderFarmerFollowupReminders(active);
-let overdue=active.filter(b=>age(b.date)>35 && birdsAvailable(b.id)>0 && !db.liftings.some(l=>l.batch===b.id && l.status==="Completed"));
+let overdue=active.filter(b=>age(b.date)>35 && birdsAvailable(b.id)>0 && !ourLiftings.some(l=>l.batch===b.id && l.status==="Completed"));
 $("liftingReminders").innerHTML=overdue.length?`<table><thead><tr><th>Batch</th><th>Farmer</th><th>Farm Location</th><th>Age</th><th>Live Birds</th><th>Expected Lift</th><th>Action</th></tr></thead><tbody>${overdue.map(b=>`<tr><td>${b.id}</td><td>${farmerName(b.farmer)}</td><td>${farmer(b.farmer)?.farmLocation||farmer(b.farmer)?.farm||""}</td><td class="bad"><b>${age(b.date)} days</b></td><td>${birdsAvailable(b.id)}</td><td>${b.lift||"-"}</td><td><button class="primary" onclick="openReminderEntry('lifting','${escapeHtml(b.farmer)}','${escapeHtml(b.id)}');$('lDate').value=today();updateLiftingAuto()">Prepare Lifting</button></td></tr>`).join("")}</tbody></table>`:`<div class="notice">No active farm batch is above 35 days and pending lifting.</div>`;
 }
 
@@ -1516,7 +1873,772 @@ function openNotification(id,target,entityType,entityId){
 }
 document.addEventListener("click",()=>$("notifPanel")?.classList.remove("show"));
 
-function renderAll(){fillSelects();renderFarmers();renderBatches();renderFollowups();renderSales();renderCustomers();renderLifting();renderTraining();renderCertificates();renderWeeklyTargets();renderDashboard();renderUsers();renderNotifications()}
+
+
+function toggleInventoryMenu(e){
+  if(e)e.stopPropagation();
+  const menu=$('inventoryNavMenu');
+  if(!menu)return;
+  menu.style.display=menu.style.display==='none'||!menu.style.display?'block':'none';
+}
+function closeInventoryMenu(){
+  const menu=$('inventoryNavMenu');
+  if(menu)menu.style.display='none';
+}
+function openInventoryManagement(btn){
+  tab('inventory',btn);
+  closeInventoryMenu();
+  setTimeout(()=>{
+    const el=$('inventoryManagementTop');
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  },50);
+}
+function openInventoryPOS(btn){
+  tab('inventoryPOS',btn);
+  closeInventoryMenu();
+  setTimeout(()=>{
+    const el=$('inventoryPOSTop');
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  },50);
+}
+document.addEventListener('click',function(e){
+  const group=$('inventoryNavGroup');
+  if(group && !group.contains(e.target))closeInventoryMenu();
+});
+
+function inventoryItem(id){return db.inventory.find(x=>x.id===id)}
+function inventoryLow(item){return Number(item.stock||0)<=Number(item.lowLevel||0)}
+function nextInventoryId(){
+  let max=0;
+  (db.inventory||[]).forEach(x=>{const n=Number(String(x.id||'').replace(/\D/g,''));if(n>max)max=n});
+  return makeId('INV',max+1);
+}
+function resetInventoryForm(){
+  edit.inventory=null;
+  if($('inventoryFormTitle'))$('inventoryFormTitle').textContent='Add Inventory Item';
+  ['invName','invPurchaseRate','invSellingRate'].forEach(id=>{if($(id))$(id).value=''});
+  if($('invCategory'))$('invCategory').value='Feeds';
+  if($('invUnit'))$('invUnit').value='Bag';
+  if($('invOpeningStock'))$('invOpeningStock').value='0';
+  if($('invLowLevel'))$('invLowLevel').value='5';
+}
+function saveInventoryItem(){
+  const name=$('invName')?.value.trim();
+  if(!name)return alert('Enter item name');
+  const category=$('invCategory')?.value;
+  if(!['Feeds','Equipment'].includes(category))return alert('Only Feeds and Equipment are allowed');
+  const now=new Date().toISOString();
+  if(edit.inventory){
+    const x=inventoryItem(edit.inventory);
+    if(!x)return;
+    x.category=category;
+    x.name=name;
+    x.unit=$('invUnit').value;
+    x.lowLevel=Number($('invLowLevel').value||0);
+    x.purchaseRate=Number($('invPurchaseRate').value||0);
+    x.sellingRate=Number($('invSellingRate').value||0);
+    x.updatedAt=now;
+  }else{
+    db.inventory.push({
+      id:nextInventoryId(),
+      category,
+      name,
+      unit:$('invUnit').value,
+      stock:Number($('invOpeningStock').value||0),
+      lowLevel:Number($('invLowLevel').value||0),
+      purchaseRate:Number($('invPurchaseRate').value||0),
+      sellingRate:Number($('invSellingRate').value||0),
+      createdAt:Date.now(),
+      updatedAt:now
+    });
+  }
+  resetInventoryForm();
+  save();
+}
+function editInventoryItem(id){
+  const x=inventoryItem(id);if(!x)return;
+  edit.inventory=id;
+  $('inventoryFormTitle').textContent='Edit Inventory Item';
+  $('invCategory').value=x.category||'Feeds';
+  $('invName').value=x.name||'';
+  $('invUnit').value=x.unit||'Piece';
+  $('invOpeningStock').value=Number(x.stock||0);
+  $('invLowLevel').value=Number(x.lowLevel||0);
+  $('invPurchaseRate').value=Number(x.purchaseRate||0);
+  $('invSellingRate').value=Number(x.sellingRate||0);
+  $('inventory').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function deleteInventoryItem(id){
+  const x=inventoryItem(id);if(!x)return;
+  if(!confirm('Delete '+x.name+' from inventory?'))return;
+  db.inventory=db.inventory.filter(i=>i.id!==id);
+  save();
+}
+
+function populateStockUpdateItems(){
+  const category=$('stockCategory')?.value||'';
+  const sel=$('stockItem');if(!sel)return;
+  const current=sel.value;
+  const items=(db.inventory||[])
+    .filter(x=>['Feeds','Equipment'].includes(x.category) && (!category||x.category===category))
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  sel.innerHTML=(category?'<option value="">Select item</option>':'<option value="">Select category first</option>')+
+    items.map(x=>`<option value="${x.id}">${x.name} — Stock ${Number(x.stock||0)} ${x.unit||''}</option>`).join('');
+  if(items.some(x=>x.id===current))sel.value=current;
+}
+
+function updateInventoryStock(){
+  const id=$('stockItem')?.value, action=$('stockAction')?.value;
+  const qty=Number($('stockQty')?.value||0), note=$('stockNote')?.value.trim()||'';
+  if(!id)return alert('Select an item');
+  if(qty<0 || (!qty && action!=='set'))return alert('Enter a valid quantity');
+  const x=inventoryItem(id);if(!x)return alert('Item not found');
+  const category=$('stockCategory')?.value||'';
+  if(!category)return alert('Select category');
+  if(x.category!==category)return alert('Selected item does not match the category');
+  const before=Number(x.stock||0);
+  let after=before;
+  if(action==='add')after=before+qty;
+  else if(action==='remove'){
+    if(qty>before)return alert('Stock Out cannot be more than available stock');
+    after=before-qty;
+  }else if(action==='set')after=qty;
+  x.stock=after;
+  x.updatedAt=new Date().toISOString();
+  db.inventoryLogs.unshift({
+    id:'LOG'+Date.now(),
+    itemId:x.id,itemName:x.name,category:x.category,
+    action,qty,before,after,note,
+    date:new Date().toISOString()
+  });
+  db.inventoryLogs=db.inventoryLogs.slice(0,500);
+  $('stockQty').value='';
+  $('stockNote').value='';
+  save();
+  if(inventoryLow(x))setTimeout(()=>alert('Low Stock Alert: '+x.name+' has '+after+' '+(x.unit||'')+' remaining.'),50);
+}
+function setInventoryFilter(v){
+  if($('inventoryFilter'))$('inventoryFilter').value=v||'all';
+  renderInventory();
+  if(v==='low'&&$('inventoryLowStockPanel'))$('inventoryLowStockPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+let posCart=[];
+let editingPOSSaleId=null;
+
+function posSaleId(){
+  let max=0;
+  (db.posSales||[]).forEach(x=>{
+    const n=Number(String(x.id||'').replace(/\D/g,''));
+    if(n>max)max=n;
+  });
+  return makeId('POS',max+1);
+}
+
+
+function posCustomerSources(){
+  const farmers=(db.farmers||[]).map(f=>({
+    source:'Farmer',
+    id:f.id,
+    name:f.name||'',
+    phone:f.phone||'',
+    address:f.address||f.farmLocation||''
+  }));
+  const customers=(db.posCustomers||[]).map(c=>({
+    source:'Customer',
+    id:c.id,
+    name:c.name||'',
+    phone:c.phone||'',
+    address:c.address||''
+  }));
+  return [...farmers,...customers].filter(x=>x.name);
+}
+
+function posCustomerLabel(x){
+  return `${x.name}${x.phone?' - '+x.phone:''} (${x.source})`;
+}
+
+function populatePOSCustomers(){
+  const list=$('posCustomerList'); if(!list)return;
+  const all=posCustomerSources().sort((a,b)=>a.name.localeCompare(b.name));
+  list.innerHTML=all.map(x=>`<option value="${posCustomerLabel(x).replace(/"/g,'&quot;')}"></option>`).join('');
+}
+
+function selectPOSCustomer(){
+  const input=$('posCustomerSearch'); if(!input)return;
+  const term=input.value.trim().toLowerCase();
+  const found=posCustomerSources().find(x=>posCustomerLabel(x).toLowerCase()===term || x.name.toLowerCase()===term);
+  if(found){
+    $('posCustomer').value=found.name;
+    $('posPhone').value=found.phone||'';
+    if($('posCustomerSource'))$('posCustomerSource').value=found.source||'';
+    if($('posCustomerSourceId'))$('posCustomerSourceId').value=found.id||'';
+  }else{
+    $('posCustomer').value=input.value.trim();
+    if($('posCustomerSource'))$('posCustomerSource').value='';
+    if($('posCustomerSourceId'))$('posCustomerSourceId').value='';
+  }
+}
+
+function openPOSNewCustomer(){
+  const box=$('posNewCustomerBox'); if(box)box.style.display='block';
+  if($('posNewCustomerName'))$('posNewCustomerName').focus();
+}
+function closePOSNewCustomer(){
+  const box=$('posNewCustomerBox'); if(box)box.style.display='none';
+  ['posNewCustomerName','posNewCustomerPhone','posNewCustomerAddress'].forEach(id=>{if($(id))$(id).value=''});
+}
+function savePOSNewCustomer(){
+  const name=$('posNewCustomerName')?.value.trim();
+  const phone=$('posNewCustomerPhone')?.value.trim()||'';
+  const address=$('posNewCustomerAddress')?.value.trim()||'';
+  if(!name)return alert('Enter customer name');
+  if(!db.posCustomers)db.posCustomers=[];
+  const c={id:'CUS'+Date.now(),name,phone,address,createdAt:Date.now()};
+  db.posCustomers.push(c);
+  save();
+  populatePOSCustomers();
+  $('posCustomerSearch').value=posCustomerLabel({source:'Customer',...c});
+  $('posCustomer').value=name;
+  $('posPhone').value=phone;
+  if($('posCustomerSource'))$('posCustomerSource').value='Customer';
+  if($('posCustomerSourceId'))$('posCustomerSourceId').value=c.id;
+  closePOSNewCustomer();
+}
+
+function populatePOSItems(){
+  const sel=$('posItem'); if(!sel)return;
+  const current=sel.value;
+  const items=(db.inventory||[]).filter(x=>['Feeds','Equipment'].includes(x.category)&&Number(x.stock||0)>0)
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  sel.innerHTML='<option value="">Select item</option>'+items.map(x=>`<option value="${x.id}">${x.name} — Stock ${Number(x.stock||0)} ${x.unit||''}</option>`).join('');
+  if(items.some(x=>x.id===current))sel.value=current;
+}
+
+function syncPOSItemRate(){
+  const x=inventoryItem($('posItem')?.value);
+  if($('posRate'))$('posRate').value=x?Number(x.sellingRate||0):'';
+}
+
+function addPOSToCart(){
+  const id=$('posItem')?.value;
+  const qty=Number($('posQty')?.value||0);
+  const rate=Number($('posRate')?.value||0);
+  if(!id)return alert('Select an item');
+  if(qty<=0)return alert('Enter valid quantity');
+  const x=inventoryItem(id); if(!x)return alert('Item not found');
+
+  const existing=posCart.find(c=>c.itemId===id);
+  const currentQty=existing?Number(existing.qty||0):0;
+  if(currentQty+qty>Number(x.stock||0))return alert('Not enough stock available');
+
+  if(existing){
+    existing.qty=currentQty+qty;
+    existing.rate=rate;
+  }else{
+    posCart.push({
+      itemId:x.id,
+      name:x.name,
+      category:x.category,
+      unit:x.unit,
+      qty,
+      rate
+    });
+  }
+  $('posItem').value='';
+  $('posQty').value='1';
+  $('posRate').value='';
+  renderPOSCart();
+}
+
+function removePOSCartItem(index){
+  posCart.splice(index,1);
+  renderPOSCart();
+}
+
+function posSubtotal(){
+  return posCart.reduce((n,x)=>n+(Number(x.qty||0)*Number(x.rate||0)),0);
+}
+
+function renderPOSCart(){
+  const rows=$('posCartRows');
+  if(rows){
+    rows.innerHTML=posCart.map((x,i)=>`<tr>
+      <td>${x.name}</td><td>${x.category}</td><td>${Number(x.qty||0)} ${x.unit||''}</td>
+      <td>${money(x.rate||0)}</td><td>${money(Number(x.qty||0)*Number(x.rate||0))}</td>
+      <td><button class="danger" onclick="removePOSCartItem(${i})">Remove</button></td>
+    </tr>`).join('')||'<tr><td colspan="6" class="muted">Cart is empty.</td></tr>';
+  }
+  const total=posSubtotal();
+  const paid=Number($('posAmountPaid')?.value||0);
+  if($('posSubtotal'))$('posSubtotal').textContent=money(total);
+  if($('posPaid'))$('posPaid').textContent=money(paid);
+  if($('posBalance'))$('posBalance').textContent=money(Math.max(0,total-paid));
+}
+
+function clearPOS(){
+  posCart=[];
+  editingPOSSaleId=null;
+  const completeBtn=[...document.querySelectorAll('#inventoryPOSTop button')].find(b=>b.textContent.trim()==='Update Sale'||b.textContent.trim()==='Complete Sale');
+  if(completeBtn)completeBtn.textContent='Complete Sale';
+  ['posCustomer','posCustomerSearch','posPhone','posCustomerSource','posCustomerSourceId'].forEach(id=>{if($(id))$(id).value=''});
+  if($('posPaymentMethod'))$('posPaymentMethod').value='';
+  if($('posPaymentStatus'))$('posPaymentStatus').value='';
+  if($('posAmountPaid'))$('posAmountPaid').value='0';
+  if($('posItem'))$('posItem').value='';
+  if($('posQty'))$('posQty').value='1';
+  if($('posRate'))$('posRate').value='';
+  renderPOSCart();
+}
+
+
+function posFeedStage(item){
+  if(!item || item.category!=='Feeds')return '';
+  const n=String(item.name||'').toLowerCase().replace(/[_–—]/g,' ').replace(/\s+/g,' ').trim();
+  if(/\bpre[\s-]*starter\b/.test(n) || /\bprestarter\b/.test(n))return 'preStarter';
+  if(/\bfinisher\b/.test(n))return 'finisher';
+  if(/\bstarter\b/.test(n))return 'starter';
+  return '';
+}
+
+function latestActiveBatchForFarmer(farmerId){
+  return (db.batches||[])
+    .filter(b=>b.farmer===farmerId && String(b.status||'Active').toLowerCase()==='active')
+    .sort((a,b)=>(Number(b.createdAt||0)-Number(a.createdAt||0)) || String(b.date||'').localeCompare(String(a.date||'')))[0] || null;
+}
+
+function applyPOSFeedToFarmerBatch(sale){
+  if(!sale || sale.customerSource!=='Farmer' || !sale.customerSourceId)return [];
+  const b=latestActiveBatchForFarmer(sale.customerSourceId);
+  if(!b)return [];
+  const updates=[];
+  (sale.items||[]).forEach(line=>{
+    const inv=inventoryItem(line.itemId);
+    const stage=posFeedStage(inv);
+    if(!stage)return;
+    const qty=Number(line.qty||0);
+    if(qty<=0)return;
+    b[stage]=Number(b[stage]||0)+qty;
+    updates.push({stage,qty,item:line.name,batch:b.id});
+  });
+  if(updates.length){
+    b.updatedAt=new Date().toISOString();
+    sale.batchFeedUpdates=updates;
+    sale.linkedBatch=b.id;
+  }
+  return updates;
+}
+
+function completePOSSale(){
+  if(!posCart.length)return alert('Add at least one item');
+  const paymentMethod=$('posPaymentMethod')?.value;
+  const paymentStatus=$('posPaymentStatus')?.value;
+  if(!paymentMethod)return alert('Please select payment method');
+  if(!paymentStatus)return alert('Please select payment status');
+
+  const total=posSubtotal();
+  let paid=Number($('posAmountPaid')?.value||0);
+  if(paymentStatus==='Paid') paid=total;
+  if(paymentStatus==='Unpaid') paid=0;
+  if(paymentStatus==='Partially Paid' && (paid<=0 || paid>=total))return alert('Enter a partial amount paid');
+  if(paid>total)return alert('Paid amount cannot be more than total');
+
+  const editOriginal=editingPOSSaleId?(db.posSales||[]).find(x=>x.id===editingPOSSaleId):null;
+  for(const c of posCart){
+    const item=inventoryItem(c.itemId);
+    if(!item)return alert('Inventory item missing: '+c.name);
+    const originalQty=editOriginal?Number((editOriginal.items||[]).find(x=>x.itemId===c.itemId)?.qty||0):0;
+    if(Number(c.qty||0)>Number(item.stock||0)+originalQty)return alert('Not enough stock for '+c.name);
+  }
+
+  const now=new Date();
+  const originalSale=editingPOSSaleId?(db.posSales||[]).find(x=>x.id===editingPOSSaleId):null;
+  if(originalSale)restorePOSSaleStock(originalSale);
+  const sale={
+    id:originalSale?originalSale.id:posSaleId(),
+    date:originalSale?originalSale.date:now.toISOString(),
+    customer:($('posCustomer')?.value.trim()||$('posCustomerSearch')?.value.trim()||'Walk-in Customer'),
+    phone:$('posPhone')?.value.trim()||'',
+    customerSource:$('posCustomerSource')?.value||'',
+    customerSourceId:$('posCustomerSourceId')?.value||'',
+    items:posCart.map(x=>({...x,total:Number(x.qty||0)*Number(x.rate||0)})),
+    total,
+    paymentMethod,
+    paymentStatus,
+    paid,
+    balance:Math.max(0,total-paid)
+  };
+
+  for(const c of posCart){
+    const item=inventoryItem(c.itemId);
+    const before=Number(item.stock||0);
+    const after=before-Number(c.qty||0);
+    item.stock=after;
+    item.updatedAt=now.toISOString();
+    db.inventoryLogs.unshift({
+      id:'LOG'+Date.now()+Math.random().toString(16).slice(2),
+      itemId:item.id,itemName:item.name,category:item.category,
+      action:'remove',qty:Number(c.qty||0),before,after,
+      note:'POS Sale '+sale.id,
+      date:now.toISOString()
+    });
+  }
+
+  const batchFeedUpdates=applyPOSFeedToFarmerBatch(sale);
+  if(originalSale){
+    const originalIndex=db.posSales.findIndex(x=>x.id===originalSale.id);
+    if(originalIndex>=0)db.posSales[originalIndex]=sale;
+    db.inventoryLogs=db.inventoryLogs.filter(l=>String(l.note||'')!=='POS Sale '+sale.id);
+    sale.items.forEach(c=>{
+      const item=inventoryItem(c.itemId);
+      if(!item)return;
+      db.inventoryLogs.unshift({
+        id:'LOG'+Date.now()+Math.random().toString(16).slice(2),
+        itemId:item.id,itemName:item.name,category:item.category,
+        action:'remove',qty:Number(c.qty||0),
+        before:Number(item.stock||0)+Number(c.qty||0),after:Number(item.stock||0),
+        note:'POS Sale '+sale.id,date:now.toISOString()
+      });
+    });
+  }else{
+    db.posSales.unshift(sale);
+  }
+  db.inventoryLogs=db.inventoryLogs.slice(0,500);
+  save();
+  const lowNames=sale.items.map(x=>inventoryItem(x.itemId)).filter(Boolean).filter(inventoryLow).map(x=>x.name);
+  clearPOS();
+  let doneMsg='Sale completed: '+sale.id;
+  if(batchFeedUpdates.length)doneMsg+='\nFeed automatically added to Broiler Batch '+sale.linkedBatch+'.';
+  if(sale.customerSource==='Farmer' && !sale.linkedBatch && sale.items.some(x=>posFeedStage(inventoryItem(x.itemId))))doneMsg+='\nNo active broiler batch was found for this farmer, so feed was not added to a batch.';
+  if(lowNames.length)doneMsg+='\nLow Stock Alert: '+lowNames.join(', ');
+  setTimeout(()=>alert(doneMsg),50);
+}
+
+function renderPOSSales(){
+  const rows=$('posSalesRows'); if(!rows)return;
+  const sales=db.posSales||[];
+  rows.innerHTML=sales.slice(0,100).map(s=>`<tr>
+    <td>${s.id}</td>
+    <td>${new Date(s.date).toLocaleString('en-IN')}</td>
+    <td>${s.customer||'Walk-in Customer'}${s.linkedBatch?`<br><small>Batch: ${s.linkedBatch}</small>`:''}</td>
+    <td>${(s.items||[]).map(x=>`${x.name} × ${Number(x.qty||0)}`).join('<br>')}</td>
+    <td>${money(s.total||0)}</td>
+    <td>${s.paymentMethod||'-'}</td>
+    <td>${s.paymentStatus||'-'}</td>
+    <td>${money(s.paid||0)}</td>
+    <td>${money(s.balance||0)}</td>
+    <td class="actions"><button class="secondary" onclick="editPOSSale('${s.id}')">Edit</button><button class="danger" onclick="deletePOSSale('${s.id}')">Delete</button><button class="secondary" onclick="printPOSInvoice('${s.id}')">Print</button></td>
+  </tr>`).join('')||'<tr><td colspan="10" class="muted">No POS sales yet.</td></tr>';
+}
+
+
+function restorePOSSaleStock(sale){
+  (sale.items||[]).forEach(line=>{
+    const item=inventoryItem(line.itemId);
+    if(!item)return;
+    item.stock=Number(item.stock||0)+Number(line.qty||0);
+    item.updatedAt=new Date().toISOString();
+  });
+  if(sale.linkedBatch && sale.customerSource==='Farmer'){
+    const b=(db.batches||[]).find(x=>x.id===sale.linkedBatch);
+    if(b){
+      (sale.batchFeedUpdates||[]).forEach(u=>{
+        if(['preStarter','starter','finisher'].includes(u.stage)){
+          b[u.stage]=Math.max(0,Number(b[u.stage]||0)-Number(u.qty||0));
+        }
+      });
+      b.updatedAt=new Date().toISOString();
+    }
+  }
+}
+
+function editPOSSale(id){
+  const s=(db.posSales||[]).find(x=>x.id===id); if(!s)return;
+  editingPOSSaleId=id;
+  posCart=(s.items||[]).map(x=>({
+    itemId:x.itemId,name:x.name,category:x.category,unit:x.unit,qty:Number(x.qty||0),rate:Number(x.rate||0)
+  }));
+  if($('posCustomer'))$('posCustomer').value=s.customer||'';
+  if($('posCustomerSearch'))$('posCustomerSearch').value=s.customer||'';
+  if($('posPhone'))$('posPhone').value=s.phone||'';
+  if($('posCustomerSource'))$('posCustomerSource').value=s.customerSource||'';
+  if($('posCustomerSourceId'))$('posCustomerSourceId').value=s.customerSourceId||'';
+  if($('posPaymentMethod'))$('posPaymentMethod').value=s.paymentMethod||'';
+  if($('posPaymentStatus'))$('posPaymentStatus').value=s.paymentStatus||'';
+  if($('posAmountPaid'))$('posAmountPaid').value=Number(s.paid||0);
+  renderPOSCart();
+  const btn=[...document.querySelectorAll('#inventoryPOSTop button')].find(b=>b.textContent.trim()==='Complete Sale');
+  if(btn)btn.textContent='Update Sale';
+  $('inventoryPOSTop')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function deletePOSSale(id){
+  const idx=(db.posSales||[]).findIndex(x=>x.id===id);
+  if(idx<0)return;
+  const s=db.posSales[idx];
+  if(!confirm('Delete POS sale '+id+'? Stock sold in this invoice will be returned to inventory.'))return;
+  restorePOSSaleStock(s);
+  db.posSales.splice(idx,1);
+  db.inventoryLogs=(db.inventoryLogs||[]).filter(l=>String(l.note||'')!=='POS Sale '+id);
+  if(editingPOSSaleId===id){
+    editingPOSSaleId=null;
+    posCart=[];
+  }
+  save();
+  renderInventory();
+  alert('POS sale deleted and stock restored.');
+}
+
+function printPOSInvoice(id){
+  const s=(db.posSales||[]).find(x=>x.id===id); if(!s)return;
+  const rows=(s.items||[]).map(x=>[x.name,x.category,`${Number(x.qty||0)} ${x.unit||''}`,money(x.rate||0),money(x.total||0)]);
+  openDetailedReport(
+    `POS Invoice - ${s.id}`,
+    [['Customer',s.customer||'Walk-in Customer'],['Contact',s.phone||'-'],['Broiler Batch',s.linkedBatch||'-'],['Date',new Date(s.date).toLocaleString('en-IN')],['Payment Method',s.paymentMethod||'-'],['Payment Status',s.paymentStatus||'-'],['Total',money(s.total||0)],['Paid',money(s.paid||0)],['Balance',money(s.balance||0)]],
+    ['Item','Category','Qty','Rate','Total'],
+    rows
+  );
+}
+
+function renderInventory(){
+  if(!db.inventory)db.inventory=[];
+  if(!db.posSales)db.posSales=[];
+  if(!db.inventoryLogs)db.inventoryLogs=[];
+  const search=($('inventorySearch')?.value||'').toLowerCase();
+  const filter=$('inventoryFilter')?.value||'all';
+  let items=[...db.inventory].filter(x=>['Feeds','Equipment'].includes(x.category));
+  const lows=items.filter(inventoryLow);
+  const typeKey=x=>String(x.name||'').trim().toLowerCase();
+  const feedTypes=new Set(items.filter(x=>x.category==='Feeds').map(typeKey).filter(Boolean)).size;
+  const equipmentTypes=new Set(items.filter(x=>x.category==='Equipment').map(typeKey).filter(Boolean)).size;
+  const totalTypes=new Set(items.map(x=>x.category+'|'+typeKey(x)).filter(x=>!x.endsWith('|'))).size;
+  if($('invTotalItems'))$('invTotalItems').textContent=totalTypes;
+  if($('invFeedItems'))$('invFeedItems').textContent=feedTypes;
+  if($('invEquipmentItems'))$('invEquipmentItems').textContent=equipmentTypes;
+  const feedStockBox=$('invFeedTypeStockCards');
+  if(feedStockBox){
+    const groups={};
+    items.filter(x=>x.category==='Feeds').forEach(x=>{
+      const name=String(x.name||'Unnamed Feed').trim();
+      const key=name.toLowerCase();
+      if(!groups[key])groups[key]={name:name,stock:0,unit:x.unit||''};
+      groups[key].stock+=Number(x.stock||0);
+    });
+    const feedGroups=Object.values(groups).sort((a,b)=>a.name.localeCompare(b.name));
+    feedStockBox.innerHTML=feedGroups.length?feedGroups.map(f=>`<div class="card"><div class="dash-label">🌾 ${f.name}</div><b>${Number(f.stock||0)}</b><small>${f.unit||'units'} available</small></div>`).join(''):'<div class="muted">No feed stock added yet.</div>';
+  }
+  if($('invLowStock'))$('invLowStock').textContent=lows.length;
+
+  const alertBox=$('inventoryLowStockAlerts');
+  if(alertBox){
+    alertBox.innerHTML=lows.length
+      ? lows.map(x=>`<div style="padding:7px 0;border-bottom:1px solid #ddd"><b>⚠️ ${x.name}</b> — ${Number(x.stock||0)} ${x.unit||''} remaining (alert level: ${Number(x.lowLevel||0)})</div>`).join('')
+      : '<span class="good">✓ No low-stock items.</span>';
+  }
+
+  if(filter==='Feeds'||filter==='Equipment')items=items.filter(x=>x.category===filter);
+  else if(filter==='low')items=items.filter(inventoryLow);
+  if(search)items=items.filter(x=>(x.id+' '+x.category+' '+x.name+' '+x.unit).toLowerCase().includes(search));
+
+  const rows=$('inventoryRows');
+  if(rows)rows.innerHTML=items.sort((a,b)=>(inventoryLow(b)-inventoryLow(a))||String(a.name).localeCompare(String(b.name))).map(x=>{
+    const low=inventoryLow(x);
+    return `<tr style="${low?'background:#fff3cd':''}">
+      <td>${x.id}</td><td>${x.category}</td><td><b>${x.name}</b></td><td>${x.unit||'-'}</td>
+      <td><b>${Number(x.stock||0)}</b></td><td>${Number(x.lowLevel||0)}</td>
+      <td class="${low?'bad':'good'}">${low?'⚠️ Low Stock':'In Stock'}</td>
+      <td>${money(x.purchaseRate||0)}</td><td>${money(x.sellingRate||0)}</td>
+      <td class="actions"><button class="secondary" onclick="editInventoryItem('${x.id}')">Edit</button><button class="danger" onclick="deleteInventoryItem('${x.id}')">Delete</button></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="10" class="muted">No inventory items found.</td></tr>';
+
+  populateStockUpdateItems();
+
+  const logs=$('inventoryLogRows');
+  if(logs)logs.innerHTML=(db.inventoryLogs||[]).slice(0,50).map(l=>{
+    const label=l.action==='add'?'Stock In':l.action==='remove'?'Stock Out':'Set Stock';
+    return `<tr><td>${new Date(l.date).toLocaleString('en-IN')}</td><td>${l.category||inventoryItem(l.itemId)?.category||'-'}</td><td>${l.itemName||inventoryItem(l.itemId)?.name||'-'}</td><td>${label}</td><td>${Number(l.qty||0)}</td><td>${Number(l.after||0)}</td><td>${l.note||'-'}</td></tr>`;
+  }).join('')||'<tr><td colspan="7" class="muted">No stock updates yet.</td></tr>';
+
+  populatePOSCustomers();
+  populatePOSItems();
+  renderPOSCart();
+  renderPOSSales();
+}
+
+
+function normalizeSalesRecordDate(v){
+  if(!v)return '';
+  const d=new Date(v);
+  if(isNaN(d))return String(v).slice(0,10);
+  return d.toISOString().slice(0,10);
+}
+
+function combinedSalesRecords(){
+  const out=[];
+
+  // Chicks / commercial sales records
+  (db.sales||[]).forEach(s=>{
+    const status=String(s.status||'Pending');
+    // Sales amount should represent actual completed/delivered sales only.
+    if(['Cancelled','Pending'].includes(status))return;
+    const qty=Number(s.qty||0);
+    const rate=Number(s.rate||0);
+    const amount=Number(s.total||qty*rate||0);
+    out.push({
+      // Chicks sales records use the delivered/delivery date, not the order date.
+      date:normalizeSalesRecordDate(s.deliveryDate||s.deliveredDate||s.date),
+      id:s.id||'-',
+      category:'Chicks',
+      customer:s.name||s.customer||'-',
+      item:saleBreed(s)||s.product||'Chicks',
+      qty,
+      unit:'chicks',
+      rate,
+      amount,
+      payment:s.paymentMethod||'-',
+      paymentStatus:status==='Complete'?'Delivered':status
+    });
+  });
+
+  // Inventory POS records: split each invoice by line item so Feeds and Equipment totals are exact.
+  (db.posSales||[]).forEach(s=>{
+    (s.items||[]).forEach((line,index)=>{
+      if(!['Feeds','Equipment'].includes(line.category))return;
+      const qty=Number(line.qty||0);
+      const rate=Number(line.rate||0);
+      const amount=Number(line.total||qty*rate||0);
+      out.push({
+        date:normalizeSalesRecordDate(s.date),
+        id:(s.id||'-')+(s.items?.length>1?'-'+(index+1):''),
+        invoiceId:s.id||'-',
+        category:line.category,
+        customer:s.customer||'Walk-in Customer',
+        item:line.name||'-',
+        qty,
+        unit:line.unit||'',
+        rate,
+        amount,
+        payment:s.paymentMethod||'-',
+        paymentStatus:s.paymentStatus||'-'
+      });
+    });
+  });
+
+  return out.sort((a,b)=>(b.date||'').localeCompare(a.date||'') || String(b.id).localeCompare(String(a.id)));
+}
+
+function filteredSalesRecords(){
+  const from=$('srFromDate')?.value||'';
+  const to=$('srToDate')?.value||'';
+  const category=$('srCategory')?.value||'All';
+  const search=($('srSearch')?.value||'').trim().toLowerCase();
+
+  return combinedSalesRecords().filter(r=>{
+    if(from && r.date<from)return false;
+    if(to && r.date>to)return false;
+    if(category!=='All' && r.category!==category)return false;
+    if(search && !(String(r.id)+' '+String(r.invoiceId||'')+' '+r.customer+' '+r.item+' '+r.category).toLowerCase().includes(search))return false;
+    return true;
+  });
+}
+
+function renderSalesRecords(){
+  const records=filteredSalesRecords();
+
+  const chicks=records.filter(r=>r.category==='Chicks');
+  const feeds=records.filter(r=>r.category==='Feeds');
+  const equipment=records.filter(r=>r.category==='Equipment');
+
+  const sum=a=>a.reduce((n,r)=>n+Number(r.amount||0),0);
+  const qty=a=>a.reduce((n,r)=>n+Number(r.qty||0),0);
+
+  if($('srChicksAmount'))$('srChicksAmount').textContent=money(sum(chicks));
+  if($('srFeedsAmount'))$('srFeedsAmount').textContent=money(sum(feeds));
+  if($('srEquipmentAmount'))$('srEquipmentAmount').textContent=money(sum(equipment));
+  if($('srGrandTotal'))$('srGrandTotal').textContent=money(sum(records));
+
+  if($('srChicksQty'))$('srChicksQty').textContent=qty(chicks)+' chicks';
+  if($('srFeedsQty'))$('srFeedsQty').textContent=qty(feeds)+' units';
+  if($('srEquipmentQty'))$('srEquipmentQty').textContent=qty(equipment)+' units';
+  if($('srRecordCount'))$('srRecordCount').textContent=records.length+' records';
+
+  const rows=$('salesRecordRows');
+  if(rows){
+    rows.innerHTML=records.map(r=>`<tr>
+      <td>${r.date||'-'}</td>
+      <td>${r.invoiceId||r.id}</td>
+      <td><b>${r.category}</b></td>
+      <td>${r.customer}</td>
+      <td>${r.item}</td>
+      <td>${Number(r.qty||0)} ${r.unit||''}</td>
+      <td>${money(r.rate||0)}</td>
+      <td><b>${money(r.amount||0)}</b></td>
+      <td>${r.payment||'-'}</td>
+      <td>${r.paymentStatus||'-'}</td>
+    </tr>`).join('')||'<tr><td colspan="10" class="muted">No sales records found.</td></tr>';
+  }
+}
+
+function setSalesRecordMonth(type){
+  const now=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const fmt=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  if(type==='today'){
+    $('srFromDate').value=fmt(now);
+    $('srToDate').value=fmt(now);
+  }else{
+    const first=new Date(now.getFullYear(),now.getMonth(),1);
+    const last=new Date(now.getFullYear(),now.getMonth()+1,0);
+    $('srFromDate').value=fmt(first);
+    $('srToDate').value=fmt(last);
+  }
+  renderSalesRecords();
+}
+
+function clearSalesRecordFilters(){
+  if($('srFromDate'))$('srFromDate').value='';
+  if($('srToDate'))$('srToDate').value='';
+  if($('srCategory'))$('srCategory').value='All';
+  if($('srSearch'))$('srSearch').value='';
+  renderSalesRecords();
+}
+
+function printSalesRecords(){
+  const records=filteredSalesRecords();
+  const chicks=records.filter(r=>r.category==='Chicks');
+  const feeds=records.filter(r=>r.category==='Feeds');
+  const equipment=records.filter(r=>r.category==='Equipment');
+  const sum=a=>a.reduce((n,r)=>n+Number(r.amount||0),0);
+
+  const rows=records.map(r=>[
+    r.date||'-',
+    r.invoiceId||r.id,
+    r.category,
+    r.customer,
+    r.item,
+    `${Number(r.qty||0)} ${r.unit||''}`,
+    money(r.rate||0),
+    money(r.amount||0),
+    r.payment||'-',
+    r.paymentStatus||'-'
+  ]);
+
+  openDetailedReport(
+    'Sales Records Report',
+    [
+      ['Chicks Sales',money(sum(chicks))],
+      ['Feeds Sales',money(sum(feeds))],
+      ['Equipment Sales',money(sum(equipment))],
+      ['Total Sales',money(sum(records))],
+      ['Records',records.length]
+    ],
+    ['Date','Record ID','Category','Customer','Item','Qty','Rate','Amount','Payment','Status'],
+    rows
+  );
+}
+
+function renderAll(){fillSelects();renderFarmers();renderBatches();renderFollowups();renderSales();renderCustomers();renderLifting();renderTraining();renderCertificates();renderWeeklyTargets();renderInventory();renderSalesRecords();renderDashboard();renderUsers();renderNotifications()}
 
 
 function saveTraining(){
@@ -1803,7 +2925,7 @@ function toggleTrainingExperience(){$("trainingExperience").style.display=$("tPr
 const SCHEDULE_PHONE="9366618895";
 const SCHEDULE_TIMES=["12:00","16:00"];
 function reportDateKey(){let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
-function sendTotalChicksReport(reason){let d=reportDateKey(),orders=db.sales.filter(o=>o.date===d&&o.status!=="Cancelled"),byBreed={};orders.forEach(o=>{let br=saleBreed(o);byBreed[br]=(byBreed[br]||0)+Number(o.qty||0)});let chicks=orders.reduce((a,o)=>a+Number(o.qty||0),0),total=orders.reduce((a,o)=>a+Number(o.total||0),0),advance=orders.reduce((a,o)=>a+Number(o.advance||0),0),outstanding=orders.reduce((a,o)=>a+Math.max(0,Number(o.total||0)-Number(o.advance||0)),0);let breedLines=Object.entries(byBreed).map(([b,q])=>`• ${b}: ${q} chicks`).join("\n")||"• No chick orders today";let lines=orders.map((o,i)=>`${i+1}. ${o.id} - ${o.name} - ${saleBreed(o)} - ${o.qty} chicks - Total ${money(o.total)} - Advance ${money(o.advance)} - Due ${money(Math.max(0,o.total-o.advance))}`).join("\n")||"No chick orders entered today.";let msg=`Manipur Poultry Farm\nDaily Chicks Order Report\n\nDate: ${d}\nReport Time: ${new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}\nTotal Orders: ${orders.length}\nTotal Chicks: ${chicks}\n\nBreed-wise Total Chicks:\n${breedLines}\n\nTotal Sales: ${money(total)}\nAdvance Received: ${money(advance)}\nOutstanding: ${money(outstanding)}\n\nToday’s Orders:\n${lines}\n\nManipur Poultry Farm`;whatsapp(SCHEDULE_PHONE,msg);sessionStorage.setItem("MPF_LAST_SCHEDULED_REPORT",JSON.stringify({date:d,time:reason||"manual"}))}
+function sendTotalChicksReport(reason){let d=reportDateKey(),orders=db.sales.filter(o=>o.date===d&&o.status!=="Cancelled"),byBreed={};orders.forEach(o=>{let br=saleBreed(o);byBreed[br]=(byBreed[br]||0)+Number(o.qty||0)});let chicks=orders.reduce((a,o)=>a+Number(o.qty||0),0),total=orders.reduce((a,o)=>a+Number(o.total||0),0),advance=orders.reduce((a,o)=>a+Number(o.advance||0),0),outstanding=orders.reduce((a,o)=>a+Math.max(0,Number(o.total||0)-Number(o.advance||0)),0);let breedLines=Object.entries(byBreed).map(([b,q])=>`• ${b}: ${q} chicks`).join("\n")||"• No chick orders today";let lines=orders.map((o,i)=>`${i+1}. ${o.id} - ${o.name} - ${saleBreed(o)} - ${o.qty} chicks - Rate ${money(o.rate||0)} - Total ${money(o.total)} - Advance ${money(o.advance)} - Due ${money(Math.max(0,o.total-o.advance))}`).join("\n")||"No chick orders entered today.";let msg=`Manipur Poultry Farm\nDaily Chicks Order Report\n\nDate: ${d}\nReport Time: ${new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}\nTotal Orders: ${orders.length}\nTotal Chicks: ${chicks}\n\nBreed-wise Total Chicks:\n${breedLines}\n\nTotal Sales: ${money(total)}\nAdvance Received: ${money(advance)}\nOutstanding: ${money(outstanding)}\n\nToday’s Orders:\n${lines}\n\nManipur Poultry Farm`;whatsapp(SCHEDULE_PHONE,msg);sessionStorage.setItem("MPF_LAST_SCHEDULED_REPORT",JSON.stringify({date:d,time:reason||"manual"}))}
 function scheduledReportCheck(){
   const now=new Date();
   const hh=String(now.getHours()).padStart(2,"0"),mm=String(now.getMinutes()).padStart(2,"0");
@@ -1857,7 +2979,7 @@ function farmerReportData(id){
   const batches=db.batches.filter(b=>b.farmer===id);
   const batchIds=new Set(batches.map(b=>b.id));
   const followups=db.followups.filter(x=>batchIds.has(x.batch)||(x.farmer===id));
-  const liftings=db.liftings.filter(x=>batchIds.has(x.batch)||(x.farmer===id));
+  const liftings=db.liftings.filter(x=>(x.outletType||'Our Outlet')!=='Other Outlet'&&(batchIds.has(x.batch)||(x.farmer===id)));
   const sales=db.sales.filter(x=>String(x.phone||'').replace(/\D/g,'')===String(f.phone||'').replace(/\D/g,'') || String(x.name||'').trim().toLowerCase()===String(f.name||'').trim().toLowerCase());
   const training=db.training.filter(x=>String(x.phone||'').replace(/\D/g,'')===String(f.phone||'').replace(/\D/g,'') || String(x.name||'').trim().toLowerCase()===String(f.name||'').trim().toLowerCase());
   return {f,batches,followups,liftings,sales,training};
@@ -1876,7 +2998,7 @@ function printFarmerReport(id){
   <h2>Broiler Batches</h2><table><tr><th>Batch</th><th>Placement</th><th>Breed</th><th>Placed</th><th>Available</th><th>Age</th><th>Lifting Date</th><th>Status</th></tr>${batches.map(x=>`<tr><td>${reportEscape(x.id)}</td><td>${reportEscape(x.date)}</td><td>${reportEscape(x.breed)}</td><td>${x.qty||0}</td><td>${birdsAvailable(x.id)}</td><td>${age(x.date)} d</td><td>${reportEscape(x.lift||formatDatePlus(x.date,42))}</td><td>${reportEscape(x.status||'')}</td></tr>`).join('')||'<tr><td colspan="8">No batches</td></tr>'}</table>
   <h2>Follow-up Records</h2><table><tr><th>Date</th><th>Batch</th><th>Week</th><th>Age</th><th>Mortality</th><th>Weight</th><th>Feed</th><th>Water</th><th>Vaccine</th><th>Status</th><th>Health</th><th>Remarks</th></tr>${followups.map(x=>`<tr><td>${reportEscape(x.date||'')}</td><td>${reportEscape(x.batch||'')}</td><td>${reportEscape(x.week||'')}</td><td>${reportEscape(age(batch(x.batch)?.date||x.date))}</td><td>${x.mort||0}</td><td>${reportEscape(x.weight||'')}</td><td>${reportEscape(x.feed||'')}</td><td>${reportEscape(x.water||'')}</td><td>${reportEscape(x.vacc||'')}</td><td>${reportEscape(x.vaccStatus||'')}</td><td>${reportEscape(x.health||'')} ${reportEscape(x.symptoms||'')}</td><td>${reportEscape(x.remarks||'')}</td></tr>`).join('')||'<tr><td colspan="12">No follow-up records</td></tr>'}</table>
   <h2>Bird Lifting</h2><table><tr><th>Date</th><th>Batch</th><th>Birds</th><th>Age</th><th>Weight</th><th>Rate</th><th>Total</th><th>Agent</th><th>Lifted By</th><th>Outlet</th><th>Vehicle</th><th>Status</th></tr>${liftings.map(x=>`<tr><td>${reportEscape(x.date||'')}</td><td>${reportEscape(x.batch||'')}</td><td>${x.qty||0}</td><td>${x.age??liftingAge(x.batch,x.date)}</td><td>${x.weight||0}</td><td>${money(x.rate)}</td><td>${money(x.total)}</td><td>${reportEscape(x.agent||'')}</td><td>${reportEscape(x.outletType||'Our Outlet')}</td><td>${reportEscape(x.outletType==='Other Outlet'?(x.otherOutlet||'-'):'-')}</td><td>${reportEscape(x.vehicle||'')}</td><td>${reportEscape(x.status||'')}</td></tr>`).join('')||'<tr><td colspan="12">No lifting records</td></tr>'}</table>
-  <h2>Commercial Sales / Orders</h2><table><tr><th>Order</th><th>Date</th><th>Chick Type</th><th>Qty</th><th>Rate</th><th>Total</th><th>Advance</th><th>Balance</th><th>Status</th></tr>${sales.map(x=>`<tr><td>${reportEscape(x.id||'')}</td><td>${reportEscape(x.date||'')}</td><td>${reportEscape(saleBreed(x))}</td><td>${x.qty||0}</td><td>${money(x.rate)}</td><td>${money(x.total)}</td><td>${money(x.advance)}</td><td>${money(Math.max(0,(x.total||0)-(x.advance||0)))}</td><td>${reportEscape(x.status||'')}</td></tr>`).join('')||'<tr><td colspan="9">No sales/orders matched</td></tr>'}</table>
+  <h2>Commercial Sales / Orders</h2><table><tr><th>Order</th><th>Date</th><th>Chick Type</th><th>Qty</th><th>Chicks Rate</th><th>Total</th><th>Advance</th><th>Balance</th><th>Status</th></tr>${sales.map(x=>`<tr><td>${reportEscape(x.id||'')}</td><td>${reportEscape(x.date||'')}</td><td>${reportEscape(saleBreed(x))}</td><td>${x.qty||0}</td><td>${money(x.rate)}</td><td>${money(x.total)}</td><td>${money(x.advance)}</td><td>${money(Math.max(0,(x.total||0)-(x.advance||0)))}</td><td>${reportEscape(x.status||'')}</td></tr>`).join('')||'<tr><td colspan="9">No sales/orders matched</td></tr>'}</table>
   <h2>Training Records</h2><table><tr><th>Batch</th><th>Date</th><th>Day</th><th>Shed</th><th>Capacity</th><th>Fee</th><th>Payment</th><th>Certificate</th><th>Remarks</th></tr>${training.map(x=>`<tr><td>${reportEscape(x.batchNo||'')}</td><td>${reportEscape(x.date||'')}</td><td>${reportEscape(x.day||'')}</td><td>${reportEscape(x.shed||'')}</td><td>${reportEscape(x.capacity||'')}</td><td>${money(x.fee)}</td><td>${reportEscape(x.payment||'')}</td><td>${reportEscape(x.certificate||'')} ${reportEscape(x.certNo||'')}</td><td>${reportEscape(x.remarks||'')}</td></tr>`).join('')||'<tr><td colspan="9">No training records matched</td></tr>'}</table>`;
   const w=window.open('','_blank'); if(!w)return alert('Please allow pop-ups to print the report');
   w.document.write(`<!doctype html><html><head><title>Farmer Complete Report - ${reportEscape(f.name)}</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;color:#222;font-size:11px}h1{text-align:center;margin:0 0 4px}h2{margin:16px 0 6px;border-bottom:2px solid #444;padding-bottom:3px}p.meta{text-align:center;margin:0 0 12px;color:#555}table{width:100%;border-collapse:collapse;margin-bottom:10px;page-break-inside:auto}th,td{border:1px solid #aaa;padding:5px;vertical-align:top}th{background:#f2f2f2}tr{page-break-inside:avoid}.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px}.metric{border:1px solid #aaa;padding:7px;text-align:center}.metric strong{display:block;font-size:14px;margin-top:3px}</style>
@@ -1909,7 +3031,7 @@ function whatsappFarmerReport(id){
   const clean=cleanPhone(f.phone); if(!clean)return alert('No valid farmer WhatsApp number');
   const totalSales=sales.filter(x=>x.status!=='Cancelled').reduce((n,x)=>n+Number(x.total||0),0), advance=sales.filter(x=>x.status!=='Cancelled').reduce((n,x)=>n+Number(x.advance||0),0);
   const totalLift=liftings.reduce((n,x)=>n+Number(x.qty||0),0), mortality=followups.reduce((n,x)=>n+Number(x.mort||0),0);
-  let msg=`*Manipur Poultry Farm*\n*Complete Farmer Report*\n\nFarmer ID: ${f.id}\nFarmer: ${f.name}\nPhone: ${f.phone||'-'}\nAddress: ${f.address||'-'}\nDistrict: ${f.district||'-'}\nFarm Location: ${f.farmLocation||f.farm||'-'}\nSheds: ${f.sheds||0}\nCapacity: ${f.capacity||0}\n\n*SUMMARY*\nBatches: ${batches.length}\nFollow-ups: ${followups.length}\nMortality: ${mortality}\nBirds Lifted: ${totalLift}\nSales Orders: ${sales.length}\nSales Value: ${money(totalSales)}\nAdvance: ${money(advance)}\nOutstanding: ${money(Math.max(0,totalSales-advance))}\nTraining Records: ${training.length}\n\n*BATCHES*\n${batches.map(x=>`${x.id} | ${x.date} | ${x.breed} | Placed ${x.qty||0} | Available ${birdsAvailable(x.id)} | Lift ${x.lift||formatDatePlus(x.date,42)} | ${x.status||''}`).join('\n')||'No batches'}\n\n*FOLLOW-UPS*\n${followups.map(x=>`${x.date||'-'} | ${x.batch||'-'} | Week ${x.week||'-'} | Mort ${x.mort||0} | Wt ${x.weight||'-'} | Vaccine ${x.vacc||'-'} | ${x.vaccStatus||''} | ${x.health||''}`).join('\n')||'No follow-ups'}\n\n*LIFTING*\n${liftings.map(x=>`${x.date||'-'} | ${x.batch||'-'} | ${x.qty||0} birds | Age ${x.age??liftingAge(x.batch,x.date)} | Wt ${x.weight||0} | Total ${money(x.total)} | ${x.status||''}`).join('\n')||'No lifting records'}\n\n*SALES / ORDERS*\n${sales.map(x=>`${x.id||'-'} | ${x.date||'-'} | ${saleBreed(x)} | ${x.qty||0} | Total ${money(x.total)} | Advance ${money(x.advance)} | Due ${money(Math.max(0,(x.total||0)-(x.advance||0)))} | ${x.status||''}`).join('\n')||'No sales/orders'}\n\n*TRAINING*\n${training.map(x=>`${x.batchNo||'-'} | ${x.date||'-'} | ${x.day||'-'} | Fee ${money(x.fee)} | ${x.certificate||''}`).join('\n')||'No training records'}\n\nGenerated: ${new Date().toLocaleString('en-IN')}\nManipur Poultry Farm`;
+  let msg=`*Manipur Poultry Farm*\n*Complete Farmer Report*\n\nFarmer ID: ${f.id}\nFarmer: ${f.name}\nPhone: ${f.phone||'-'}\nAddress: ${f.address||'-'}\nDistrict: ${f.district||'-'}\nFarm Location: ${f.farmLocation||f.farm||'-'}\nSheds: ${f.sheds||0}\nCapacity: ${f.capacity||0}\n\n*SUMMARY*\nBatches: ${batches.length}\nFollow-ups: ${followups.length}\nMortality: ${mortality}\nBirds Lifted: ${totalLift}\nSales Orders: ${sales.length}\nSales Value: ${money(totalSales)}\nAdvance: ${money(advance)}\nOutstanding: ${money(Math.max(0,totalSales-advance))}\nTraining Records: ${training.length}\n\n*BATCHES*\n${batches.map(x=>`${x.id} | ${x.date} | ${x.breed} | Placed ${x.qty||0} | Available ${birdsAvailable(x.id)} | Lift ${x.lift||formatDatePlus(x.date,42)} | ${x.status||''}`).join('\n')||'No batches'}\n\n*FOLLOW-UPS*\n${followups.map(x=>`${x.date||'-'} | ${x.batch||'-'} | Week ${x.week||'-'} | Mort ${x.mort||0} | Wt ${x.weight||'-'} | Vaccine ${x.vacc||'-'} | ${x.vaccStatus||''} | ${x.health||''}`).join('\n')||'No follow-ups'}\n\n*LIFTING*\n${liftings.map(x=>`${x.date||'-'} | ${x.batch||'-'} | ${x.qty||0} birds | Age ${x.age??liftingAge(x.batch,x.date)} | Wt ${x.weight||0} | Total ${money(x.total)} | ${x.status||''}`).join('\n')||'No lifting records'}\n\n*SALES / ORDERS*\n${sales.map(x=>`${x.id||'-'} | ${x.date||'-'} | ${saleBreed(x)} | ${x.qty||0} | Rate ${money(x.rate||0)} | Total ${money(x.total)} | Advance ${money(x.advance)} | Due ${money(Math.max(0,(x.total||0)-(x.advance||0)))} | ${x.status||''}`).join('\n')||'No sales/orders'}\n\n*TRAINING*\n${training.map(x=>`${x.batchNo||'-'} | ${x.date||'-'} | ${x.day||'-'} | Fee ${money(x.fee)} | ${x.certificate||''}`).join('\n')||'No training records'}\n\nGenerated: ${new Date().toLocaleString('en-IN')}\nManipur Poultry Farm`;
   if(msg.length>12000) msg=msg.slice(0,11900)+'\n\n[Report shortened for WhatsApp message length. Use Farmer Report for the complete printable report.]';
   whatsapp(f.phone,msg);
 }
@@ -1918,7 +3040,7 @@ function monthlyReportMonth(){let el=$("monthlyReportMonth");let v=el&&el.value;
 function monthLabel(m){let [y,mo]=m.split('-');return new Date(Number(y),Number(mo)-1,1).toLocaleString('en-IN',{month:'long',year:'numeric'})}
 function inReportMonth(date,m){return String(date||'').slice(0,7)===m}
 function monthlyData(type,m){
-  if(type==='lifting') return db.liftings.filter(x=>inReportMonth(x.date,m));
+  if(type==='lifting') return db.liftings.filter(x=>(x.outletType||'Our Outlet')!=='Other Outlet'&&inReportMonth(x.date,m));
   if(type==='sales') return db.sales.filter(x=>inReportMonth(x.date,m));
   if(type==='training') return db.training.filter(x=>inReportMonth(x.date,m));
   return [];
@@ -1941,7 +3063,7 @@ function printMonthlyReport(type){
     return;
   }
   let titles={lifting:'Monthly Bird Lifting Report',sales:'Monthly Commercial Sales Report',training:'Monthly Poultry Training Report'};
-  let headers={lifting:['Date','Batch','Farmer','Birds Lifted','Weight','Rate','Total','Agent','Vehicle','Status'],sales:['Order ID','Date','Customer','Phone','Chick Type','Qty','Rate','Total','Advance','Balance','Delivery Date','Status'],training:['Batch','Trainee','Contact','Date','Day','Location','Fee','Payment','Certificate','Certificate No.','Remarks']};
+  let headers={lifting:['Date','Batch','Farmer','Birds Lifted','Weight','Rate','Total','Agent','Vehicle','Status'],sales:['Order ID','Date','Customer','Phone','Chick Type','Qty','Chicks Rate','Total','Advance','Balance','Delivery Date','Status'],training:['Batch','Trainee','Contact','Date','Day','Location','Fee','Payment','Certificate','Certificate No.','Remarks']};
   let rows=monthlyRows(type,m); openDetailedReport(titles[type]+' — '+monthLabel(m),monthlySummary(type,m),headers[type],rows);
 }
 function monthlySendText(type,m){
@@ -1962,11 +3084,12 @@ function sendMonthlyReport(type){
   }
   whatsapp(SCHEDULE_PHONE,monthlySendText(type,m)+'\n\nManipur Poultry Farm');
 }
-function printReport(type){if(type==='integration'){let rows=db.farmers.map(x=>[x.id,x.name,x.phone||'',x.address||'',x.farmLocation||x.farm||'',x.joinDate||'',x.status||'Active']);let active=db.farmers.filter(x=>(x.status||'Active')==='Active').length;openDetailedReport('Integration Farmer Report',[['Total Farmers',db.farmers.length],['Active Farmers',active],['Inactive Farmers',db.farmers.length-active],['Batches Linked',db.batches.length]],['Farmer ID','Farmer Name','Phone','Address','Farm Location','Join Date','Status'],rows);return}if(type==='sales'){let valid=db.sales.filter(x=>x.status!=='Cancelled'),total=valid.reduce((n,x)=>n+Number(x.total||0),0),advance=valid.reduce((n,x)=>n+Number(x.advance||0),0);let rows=db.sales.map(x=>[x.id,x.date||'',x.name||'',x.phone||'-',saleBreed(x),x.qty||0,money(x.rate),money(x.total),money(x.advance),money(Math.max(0,(x.total||0)-(x.advance||0))),x.deliveryDate||'',x.status||'']);openDetailedReport('Commercial Sales Detailed Report',[['Orders',db.sales.length],['Active Orders',valid.length],['Total Sales',money(total)],['Outstanding',money(Math.max(0,total-advance))]],['Order ID','Date','Customer','Phone','Chick Type','Qty','Rate','Total','Advance','Balance','Delivery Date','Status'],rows);return}if(type==='lifting'){let rows=db.liftings.map(x=>[x.date||'',x.batch||'',farmerName(x.farmer||batch(x.batch)?.farmer),x.available??birdsAvailable(x.batch),x.qty||0,x.age??liftingAge(x.batch,x.date),x.weight||0,money(x.rate),money(x.total),x.agent||'',x.vehicle||'',x.status||'']);let total=db.liftings.reduce((n,x)=>n+Number(x.qty||0),0);openDetailedReport('Bird Lifting Detailed Report',[['Lifting Records',db.liftings.length],['Birds Lifted',total],['Completed',db.liftings.filter(x=>x.status==='Completed').length],['Scheduled',db.liftings.filter(x=>x.status==='Scheduled').length]],['Date','Batch','Farmer','Available','Birds Lifted','Age','Weight','Rate','Total','Agent','Vehicle','Status'],rows);return}if(type==='followup'){let rows=db.followups.map(x=>[x.date||'',x.batch||'',farmerName(x.farmer||batch(x.batch)?.farmer),`Week ${x.week||''}`,age(batch(x.batch)?.date||x.date),x.mort||0,x.weight||'',x.feed||'',x.water||'',x.vacc||'',x.vaccStatus||'',x.health||'',x.symptoms||'',x.remarks||'']);let mortality=db.followups.reduce((n,x)=>n+Number(x.mort||0),0);openDetailedReport('Follow-up Detailed Report',[['Follow-ups',db.followups.length],['Total Mortality',mortality],['Health Alerts',db.followups.filter(x=>x.health==='Yes').length],['Vaccine Entries',db.followups.filter(x=>x.vacc).length]],['Date','Batch','Farmer','Week','Age','Mortality','Weight','Feed','Water','Vaccine','Vaccine Status','Health Issue','Symptoms','Remarks'],rows);return}if(type==='training'){let rows=db.training.map(x=>[x.batchNo||'',x.name||'',x.aadhaar||'',x.phone||'',x.address||'',x.date||'',x.day||'',x.shed||'',x.farmSize||'',x.capacity||'',x.location||'',x.previous==='Yes'?`${x.prevBreed||''} / ${x.prevQty||0}`:'No',money(x.fee),x.payment||'',x.certificate||'',x.certNo||'',x.remarks||'']);let fees=db.training.reduce((n,x)=>n+Number(x.fee||0),0);openDetailedReport('Poultry Training Detailed Report',[['Trainees',db.training.length],['Training Fees',money(fees)],['Certificates',db.training.filter(x=>x.certificate==='Yes').length],['Farm Sheds',db.training.filter(x=>x.shed==='Yes').length]],['Batch','Trainee','Aadhaar','Contact','Address','Date','Day','Shed','Farm Size','Capacity','Location','Previous Birds','Fee','Payment','Certificate','Certificate No.','Remarks'],rows);return}}
+function printReport(type){if(type==='integration'){let rows=db.farmers.map(x=>[x.id,x.name,x.phone||'',x.address||'',x.farmLocation||x.farm||'',x.joinDate||'',x.status||'Active']);let active=db.farmers.filter(x=>(x.status||'Active')==='Active').length;openDetailedReport('Integration Farmer Report',[['Total Farmers',db.farmers.length],['Active Farmers',active],['Inactive Farmers',db.farmers.length-active],['Batches Linked',db.batches.length]],['Farmer ID','Farmer Name','Phone','Address','Farm Location','Join Date','Status'],rows);return}if(type==='sales'){let valid=db.sales.filter(x=>x.status!=='Cancelled'),total=valid.reduce((n,x)=>n+Number(x.total||0),0),advance=valid.reduce((n,x)=>n+Number(x.advance||0),0);let rows=db.sales.map(x=>[x.id,x.date||'',x.name||'',x.phone||'-',saleBreed(x),x.qty||0,money(x.rate),money(x.total),money(x.advance),money(Math.max(0,(x.total||0)-(x.advance||0))),x.deliveryDate||'',x.status||'']);openDetailedReport('Commercial Sales Detailed Report',[['Orders',db.sales.length],['Active Orders',valid.length],['Total Sales',money(total)],['Outstanding',money(Math.max(0,total-advance))]],['Order ID','Date','Customer','Phone','Chick Type','Qty','Chicks Rate','Total','Advance','Balance','Delivery Date','Status'],rows);return}if(type==='lifting'){let rows=db.liftings.map(x=>[x.date||'',x.batch||'',farmerName(x.farmer||batch(x.batch)?.farmer),x.available??birdsAvailable(x.batch),x.qty||0,x.age??liftingAge(x.batch,x.date),x.weight||0,money(x.rate),money(x.total),x.agent||'',x.vehicle||'',x.status||'']);let total=db.liftings.reduce((n,x)=>n+Number(x.qty||0),0);openDetailedReport('Bird Lifting Detailed Report',[['Lifting Records',db.liftings.length],['Birds Lifted',total],['Completed',db.liftings.filter(x=>x.status==='Completed').length],['Scheduled',db.liftings.filter(x=>x.status==='Scheduled').length]],['Date','Batch','Farmer','Available','Birds Lifted','Age','Weight','Rate','Total','Agent','Vehicle','Status'],rows);return}if(type==='followup'){let rows=db.followups.map(x=>[x.date||'',x.batch||'',farmerName(x.farmer||batch(x.batch)?.farmer),`Week ${x.week||''}`,age(batch(x.batch)?.date||x.date),x.mort||0,x.weight||'',x.feed||'',x.water||'',x.vacc||'',x.vaccStatus||'',x.health||'',x.symptoms||'',x.remarks||'']);let mortality=db.followups.reduce((n,x)=>n+Number(x.mort||0),0);openDetailedReport('Follow-up Detailed Report',[['Follow-ups',db.followups.length],['Total Mortality',mortality],['Health Alerts',db.followups.filter(x=>x.health==='Yes').length],['Vaccine Entries',db.followups.filter(x=>x.vacc).length]],['Date','Batch','Farmer','Week','Age','Mortality','Weight','Feed','Water','Vaccine','Vaccine Status','Health Issue','Symptoms','Remarks'],rows);return}if(type==='training'){let rows=db.training.map(x=>[x.batchNo||'',x.name||'',x.aadhaar||'',x.phone||'',x.address||'',x.date||'',x.day||'',x.shed||'',x.farmSize||'',x.capacity||'',x.location||'',x.previous==='Yes'?`${x.prevBreed||''} / ${x.prevQty||0}`:'No',money(x.fee),x.payment||'',x.certificate||'',x.certNo||'',x.remarks||'']);let fees=db.training.reduce((n,x)=>n+Number(x.fee||0),0);openDetailedReport('Poultry Training Detailed Report',[['Trainees',db.training.length],['Training Fees',money(fees)],['Certificates',db.training.filter(x=>x.certificate==='Yes').length],['Farm Sheds',db.training.filter(x=>x.shed==='Yes').length]],['Batch','Trainee','Aadhaar','Contact','Address','Date','Day','Shed','Farm Size','Capacity','Location','Previous Birds','Fee','Payment','Certificate','Certificate No.','Remarks'],rows);return}}
 
 toggleOtherBreed();
 ["bDate","bLift","uDate","sDeliveryDate","lDate","tDate","eJoinDate"].forEach(x=>$(x).value=today());if($("monthlyReportMonth"))$("monthlyReportMonth").value=today().slice(0,7);autoScheduleChickDelivery();
-showApp();if($("lDate"))$("lDate").value=today();if($("targetWeek"))$("targetWeek").value=mondayOf(today());renderAll();scheduledReportCheck();setInterval(scheduledReportCheck,30000);setInterval(()=>{if(currentUser)renderAll()},30000);
+showApp();if($("lDate"))$("lDate").value=today();if($("targetWeek"))$("targetWeek").value=mondayOf(today());renderAll();scheduledReportCheck();
+if(typeof refreshPendingOrderBreedOptions==="function")refreshPendingOrderBreedOptions();setInterval(scheduledReportCheck,30000);setInterval(()=>{if(currentUser)renderAll()},30000);
 </script>
 <script>document.addEventListener("DOMContentLoaded",()=>{try{toggleLiftingOutlet();}catch(e){}});</script>
 </body>
