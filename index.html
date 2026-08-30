@@ -1085,7 +1085,7 @@ a{color:#8a6b00}
 const SUPABASE_URL = "https://hzymlcmockvxkyfrbrgh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6eW1sY21vY2t2eGt5ZnJicmdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNzM2MzUsImV4cCI6MjEwMjk0OTYzNX0.QIE_73f-W4oK4snImML9h5tIqaYMdcj9PeqbZv1qrvM";
 let supabaseClient=null, currentUser=null, saveTimer=null, realtimeChannel=null, lastSavedAt=null;
-const DEFAULT_DB={farmers:[],batches:[],followups:[],sales:[],liftings:[],training:[],salesTargets:[],inventory:[],inventoryLogs:[],posSales:[],posCustomers:[]};
+const DEFAULT_DB={farmers:[],batches:[],followups:[],sales:[],liftings:[],training:[],salesTargets:[],inventory:[],inventoryLogs:[],posSales:[],posCustomers:[],farmerOrders:[],farmerChecklists:[],farmerSupport:[],farmerNotices:[]};
 let db=structuredClone(DEFAULT_DB);
 let edit={farmer:null,batch:null,follow:null,sale:null,lift:null,training:null,inventory:null};
 const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
@@ -1094,7 +1094,7 @@ const makeId=(p,n)=>p+String(n).padStart(5,"0");
 
 function normalizeDb(data={}){
   const d={...structuredClone(DEFAULT_DB),...data};
-  d.training=d.training||[]; d.salesTargets=d.salesTargets||[]; d.inventory=d.inventory||[]; d.inventoryLogs=d.inventoryLogs||[]; d.posSales=d.posSales||[]; d.posCustomers=d.posCustomers||[];
+  d.training=d.training||[]; d.salesTargets=d.salesTargets||[]; d.inventory=d.inventory||[]; d.inventoryLogs=d.inventoryLogs||[]; d.posSales=d.posSales||[]; d.posCustomers=d.posCustomers||[]; d.farmerOrders=d.farmerOrders||[]; d.farmerChecklists=d.farmerChecklists||[]; d.farmerSupport=d.farmerSupport||[]; d.farmerNotices=d.farmerNotices||[];
   d.followups=(d.followups||[]).map(x=>({...x,week:Number(x.week||Math.min(6,Math.max(1,Math.ceil(age(batch(x.batch)?.date||x.date)/7))))}));
   d.farmers=(d.farmers||[]).map(f=>({...f,address:f.address||f.village||"",farmLocation:f.farmLocation||f.farm||""}));
   return d;
@@ -5015,161 +5015,150 @@ function toggleRecentCommercialOrders(){
 
 
 
-<script id="mpf-farmer-connect-admin-bridge">
+
+
+
+<button id="openAdminMpfConnectBtn" type="button" class="primary"
+ onclick="window.open('mpf_admin_connect_all_data_linked.html','_blank')"
+ style="position:fixed;right:18px;bottom:18px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.18)">
+ 🛡️ Admin MPF Connect
+</button>
+
+
+<script id="mpf-all-data-portal-bridge">
 (function(){
-  const STATE_KEY='mpf_farmer_connect_state_v1';
-  const ORDER_KEY='mpf_farmer_connect_orders_v1';
+  const STATE_KEY='mpf_main_shared_state_v2';
+  const ACTION_KEY='mpf_farmer_portal_actions_v2';
 
   function parse(raw,fallback){try{return raw?JSON.parse(raw):fallback}catch(e){return fallback}}
-  function orders(){
-    if(typeof db==='undefined')return [];
-    if(!Array.isArray(db.farmerOrders))db.farmerOrders=[];
-    return db.farmerOrders;
+  function ensure(){
+    if(typeof db==='undefined')return;
+    ['farmerOrders','farmerChecklists','farmerSupport','farmerNotices'].forEach(k=>{
+      if(!Array.isArray(db[k]))db[k]=[];
+    });
   }
-  function importOrders(){
+
+  function processPortalActions(){
     if(typeof db==='undefined')return false;
-    const incoming=parse(localStorage.getItem(ORDER_KEY),[]);
-    if(!Array.isArray(incoming))return false;
+    ensure();
+    const actions=parse(localStorage.getItem(ACTION_KEY),[]);
+    if(!Array.isArray(actions)||!actions.length)return false;
     let changed=false;
-    incoming.forEach(o=>{
-      if(!o||!o.id)return;
-      const existing=orders().find(x=>String(x.id)===String(o.id));
-      if(existing){
-        const status=existing.status||'Pending';
-        Object.assign(existing,o,{status});
-      }else{
-        orders().unshift({...o,status:o.status||'Pending'});
+    const processed=new Set();
+
+    actions.forEach(a=>{
+      if(!a||!a.actionId||processed.has(a.actionId))return;
+      processed.add(a.actionId);
+
+      if(a.type==='order'&&a.data){
+        const i=db.farmerOrders.findIndex(x=>x.id===a.data.id);
+        if(i>=0){
+          const status=db.farmerOrders[i].status||'Pending';
+          db.farmerOrders[i]={...db.farmerOrders[i],...a.data,status};
+        }else db.farmerOrders.unshift({...a.data,status:a.data.status||'Pending'});
+        changed=true;
+      }
+
+      if(a.type==='checklist'&&a.data){
+        const i=db.farmerChecklists.findIndex(x=>x.id===a.data.id);
+        if(i>=0)db.farmerChecklists[i]={...db.farmerChecklists[i],...a.data};
+        else db.farmerChecklists.unshift(a.data);
+        changed=true;
+      }
+
+      if(a.type==='support'&&a.data){
+        if(!db.farmerSupport.some(x=>x.id===a.data.id))db.farmerSupport.unshift(a.data);
         changed=true;
       }
     });
+
+    if(processed.size)localStorage.setItem(ACTION_KEY,'[]');
     return changed;
   }
-  function exportOrders(){
-    try{localStorage.setItem(ORDER_KEY,JSON.stringify(orders()))}catch(e){}
-  }
-  function esc(v){
-    return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  window.renderFarmerConnectOrders=function(){
-    const rows=document.getElementById('farmerConnectOrderRows');
-    if(!rows||typeof db==='undefined')return;
-    const list=orders().slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-    rows.innerHTML=list.length?list.map(o=>{
-      const id=esc(o.id);
-      return `<tr>
-        <td>${id}</td>
-        <td>${esc(o.date||'')}</td>
-        <td><b>${esc(o.farmerName||o.farmerId||'')}</b><br><small>${esc(o.farmerId||'')}</small></td>
-        <td>${esc(o.category||'')}</td>
-        <td>${esc(o.item||'')}</td>
-        <td>${esc(o.qty||0)} ${esc(o.unit||'')}</td>
-        <td>${esc(o.requiredDate||'-')}</td>
-        <td>${esc(o.note||'-')}</td>
-        <td><b>${esc(o.status||'Pending')}</b></td>
-        <td class="actions">
-          <button class="secondary fc-order-action" data-id="${id}" data-status="Confirmed">Confirm</button>
-          <button class="primary fc-order-action" data-id="${id}" data-status="Delivered">Delivered</button>
-          <button class="danger fc-order-action" data-id="${id}" data-status="Cancelled">Cancel</button>
-          <button class="danger fc-order-delete" data-id="${id}">Delete</button>
-        </td>
-      </tr>`;
-    }).join(''):'<tr><td colspan="10" class="muted">No Farmer Connect orders yet.</td></tr>';
-  };
-
-  window.setFarmerConnectOrderStatus=function(id,status){
-    const o=orders().find(x=>String(x.id)===String(id));
-    if(!o)return;
-    o.status=status;
-    o.updatedAt=new Date().toISOString();
-    exportOrders();
-    publish();
-    if(typeof save==='function')save();
-  };
-
-  window.deleteFarmerConnectOrder=function(id){
-    if(!confirm('Delete this Farmer Connect order?'))return;
-    const i=orders().findIndex(x=>String(x.id)===String(id));
-    if(i<0)return;
-    orders().splice(i,1);
-    exportOrders();
-    publish();
-    if(typeof save==='function')save();
-  };
 
   function publish(){
     if(typeof db==='undefined')return;
-    importOrders();
+    ensure();
     const payload={
-      version:1,
+      version:2,
       updatedAt:new Date().toISOString(),
-      farmers:(db.farmers||[]).map(f=>({
-        id:f.id,name:f.name||'',phone:f.phone||'',
-        address:f.address||'',district:f.district||'',farmLocation:f.farmLocation||'',
-        capacity:Number(f.capacity||0),status:f.status||'Active',
-        liftingType:f.liftingType||'Lifting',created:f.created||'',staff:f.staff||''
-      })),
+      farmers:(db.farmers||[]).map(x=>({...x})),
       batches:(db.batches||[]).map(x=>({...x})),
       followups:(db.followups||[]).map(x=>({...x})),
+      sales:(db.sales||[]).map(x=>({...x})),
       liftings:(db.liftings||[]).map(x=>({...x})),
-      inventory:(db.inventory||[]).filter(x=>['Feeds','Equipment'].includes(x.category)).map(x=>({
-        id:x.id,category:x.category,name:x.name,unit:x.unit,
-        stock:Number(x.stock||0),sellingRate:Number(x.sellingRate||0)
-      })),
-      farmerOrders:orders().map(x=>({...x}))
+      inventory:(db.inventory||[]).map(x=>({...x})),
+      farmerOrders:(db.farmerOrders||[]).map(x=>({...x})),
+      farmerChecklists:(db.farmerChecklists||[]).map(x=>({...x})),
+      farmerSupport:(db.farmerSupport||[]).map(x=>({...x})),
+      farmerNotices:(db.farmerNotices||[]).map(x=>({...x}))
     };
     try{localStorage.setItem(STATE_KEY,JSON.stringify(payload))}catch(e){}
-    exportOrders();
-    window.renderFarmerConnectOrders();
   }
-  window.publishFarmerConnectState=publish;
+  window.publishMpfSharedState=publish;
 
-  if(typeof renderAll==='function'&&!renderAll.__fcWrapped){
+  // Keep existing Farmer Connect Orders panel working with db.farmerOrders.
+  window.renderFarmerConnectOrders=function(){
+    const rows=document.getElementById('farmerConnectOrderRows');
+    if(!rows||typeof db==='undefined')return;
+    ensure();
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const list=db.farmerOrders.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+    rows.innerHTML=list.length?list.map(o=>`
+      <tr>
+        <td>${esc(o.id)}</td><td>${esc(o.date||'')}</td>
+        <td><b>${esc(o.farmerName||o.farmerId||'')}</b><br><small>${esc(o.farmerId||'')}</small></td>
+        <td>${esc(o.category||'')}</td><td>${esc(o.item||'')}</td>
+        <td>${esc(o.qty||0)} ${esc(o.unit||'')}</td><td>${esc(o.requiredDate||'-')}</td>
+        <td>${esc(o.note||'-')}</td><td><b>${esc(o.status||'Pending')}</b></td>
+        <td class="actions">
+          <button class="secondary portal-order-status" data-id="${esc(o.id)}" data-status="Confirmed">Confirm</button>
+          <button class="primary portal-order-status" data-id="${esc(o.id)}" data-status="Delivered">Delivered</button>
+          <button class="danger portal-order-status" data-id="${esc(o.id)}" data-status="Cancelled">Cancel</button>
+        </td>
+      </tr>`).join(''):'<tr><td colspan="10" class="muted">No Farmer Connect orders yet.</td></tr>';
+  };
+
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('.portal-order-status');
+    if(!b||typeof db==='undefined')return;
+    const o=(db.farmerOrders||[]).find(x=>String(x.id)===String(b.dataset.id));
+    if(!o)return;
+    o.status=b.dataset.status;
+    o.updatedAt=new Date().toISOString();
+    if(typeof save==='function')save();
+    publish();
+  });
+
+  if(typeof renderAll==='function'&&!renderAll.__allDataPortalWrapped){
     const old=renderAll;
     renderAll=function(){
       const result=old.apply(this,arguments);
-      try{publish()}catch(e){}
+      try{publish();window.renderFarmerConnectOrders()}catch(e){}
       return result;
     };
-    renderAll.__fcWrapped=true;
+    renderAll.__allDataPortalWrapped=true;
   }
 
-  document.addEventListener('click',e=>{
-    const action=e.target.closest('.fc-order-action');
-    if(action){
-      window.setFarmerConnectOrderStatus(action.dataset.id,action.dataset.status);
-      return;
-    }
-    const del=e.target.closest('.fc-order-delete');
-    if(del)window.deleteFarmerConnectOrder(del.dataset.id);
-  });
-
   window.addEventListener('storage',e=>{
-    if(e.key===ORDER_KEY){
-      const changed=importOrders();
-      window.renderFarmerConnectOrders();
+    if(e.key===ACTION_KEY){
+      const changed=processPortalActions();
       if(changed&&typeof save==='function')save();
       publish();
     }
   });
 
-  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{try{publish()}catch(e){}},700));
   setInterval(()=>{
     try{
-      const changed=importOrders();
+      const changed=processPortalActions();
       if(changed&&typeof save==='function')save();
       publish();
     }catch(e){}
-  },3000);
+  },2500);
+
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{try{publish()}catch(e){}},800));
 })();
 </script>
-
-
-<button id="openFarmerConnectBtn" type="button" class="secondary"
- onclick="window.open('mpf_farmer_connect_linked.html','_blank')"
- style="position:fixed;right:18px;bottom:18px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.18)">
- 👨‍🌾 Farmer Connect
-</button>
 
 </body>
 </html>
