@@ -385,14 +385,10 @@
         <label for="farmerId">Farmer ID</label>
         <input class="input" id="farmerId" placeholder="e.g. F00001" autocomplete="username" />
       </div>
-      <div class="field">
-        <label for="farmerPin">PIN / Password</label>
-        <input class="input" id="farmerPin" type="password" placeholder="Enter your PIN" autocomplete="current-password" />
-      </div>
       <button class="login-btn" type="submit">Login to Farmer Connect</button>
-      <div id="loginError" class="error hidden">Invalid Farmer ID / PIN, or Farmer Connect has not received data from the MPF admin app yet.</div>
+      <div id="loginError" class="error hidden">Invalid Farmer ID, inactive account, or Farmer Connect has not received data from the MPF admin app yet.</div>
       <div class="login-note">
-        Use the Farmer ID and Portal PIN issued by the MPF team.
+        Use the Farmer ID issued by the MPF team.
       </div>
     </form>
   </div>
@@ -884,9 +880,9 @@
     e.preventDefault();
     portalState=loadPortalState();
     const id=document.getElementById('farmerId').value.trim().toUpperCase();
-    const pin=document.getElementById('farmerPin').value.trim();
     const f=(portalState.farmers||[]).find(x=>String(x.id||'').toUpperCase()===id);
-    if(f&&String(f.portalPin||'1234')===pin&&String(f.status||'Active')!=='Inactive'){
+
+    if(f&&String(f.status||'Active')!=='Inactive'){
       sessionStorage.setItem('mpfFarmerLoggedIn','1');
       document.getElementById('loginError').classList.add('hidden');
       enterApp(f);
@@ -902,7 +898,6 @@
     document.getElementById('postLoginWelcome').classList.add('hidden');
     app.classList.add('hidden');
     loginPage.classList.remove('hidden');
-    document.getElementById('farmerPin').value='';
   });
 
   document.getElementById('menuBtn').addEventListener('click',()=>sidebar.classList.toggle('open'));
