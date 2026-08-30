@@ -332,6 +332,42 @@ a{color:#8a6b00}
 <style id="mpf-pro-sidebar">
 #nav{display:flex;flex-direction:column;gap:4px;position:fixed;left:0;top:82px;bottom:0;width:265px;padding:14px;background:#fff;border-right:1px solid var(--line);overflow:auto;z-index:30;flex-wrap:nowrap}#nav button{width:100%;text-align:left;padding:11px 12px}.nav-group{width:100%}.nav-group-title{width:100%!important;display:flex;justify-content:space-between;align-items:center;color:#173d2a!important;background:#f3f7f5!important;border-radius:10px!important}.nav-group-items{display:none;padding:5px 0 4px 12px}.nav-group.open .nav-group-items{display:block}.nav-group-items button{font-size:13px}main{margin-left:265px;max-width:calc(1500px + 265px)}header{padding-left:22px}.welcome-screen{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#063a23,#0f6b3d);display:none;align-items:center;justify-content:center;color:#fff;text-align:center}.welcome-card{padding:34px 28px;border:1px solid rgba(255,255,255,.18);border-radius:22px;background:rgba(255,255,255,.10);backdrop-filter:blur(12px);box-shadow:0 25px 70px rgba(0,0,0,.28)}.welcome-card h1{margin:8px 0;font-size:30px}.welcome-card p{margin:0;opacity:.86}.welcome-icon{font-size:48px}@media(max-width:850px){#nav{transform:translateX(-105%);top:0;width:280px;box-shadow:10px 0 30px #0003}.nav-open #nav{transform:translateX(0)}main{margin-left:0;max-width:1500px}.nav-backdrop{display:none}.nav-open .nav-backdrop{display:block;position:fixed;inset:0;background:#0006;z-index:29}}
 </style>
+
+<style id="mpf-inventory-action-grid-style">
+#inventory .inventory-action-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:10px!important;
+  align-items:start!important;
+  margin-bottom:10px!important;
+}
+#inventory .inventory-action-grid>.panel{
+  margin:0!important;
+  min-width:0!important;
+  height:100%!important;
+}
+#inventory .inventory-action-grid>.panel .grid{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:7px!important;
+}
+#inventory .inventory-action-grid>.panel .actions{
+  margin-top:8px!important;
+}
+#inventory .inventory-action-grid>.panel>button.primary{
+  margin-top:8px!important;
+}
+@media(max-width:900px){
+  #inventory .inventory-action-grid{
+    grid-template-columns:1fr!important;
+  }
+}
+@media(max-width:600px){
+  #inventory .inventory-action-grid>.panel .grid{
+    grid-template-columns:1fr!important;
+  }
+}
+</style>
+
 </head>
 <body>
 <div id="welcomeScreen" class="welcome-screen"><div class="welcome-card"><div class="welcome-icon">🐔</div><h1>Welcome to Manipur Poultry Farm</h1><p>Your business dashboard is loading...</p></div></div>
@@ -413,15 +449,7 @@ a{color:#8a6b00}
     <div class="dash-list" id="dashPendingBirds"></div>
   </div>
 
-  <div class="dash-card" style="margin-bottom:18px">
-    <div class="dash-title"><h3>Quick Actions</h3><span>Jump directly to daily work</span></div>
-    <div class="dash-actions">
-      <button class="dash-action" onclick="goToEntry('batches')"><b>🐣 Broiler Batches</b><span>Manage active batches</span></button>
-      <button class="dash-action" onclick="goToEntry('lifting')"><b>🚚 Lifting</b><span>Schedule and track lifting</span></button>
-      <button class="dash-action" onclick="goToEntry('sales')"><b>🛒 Commercial Sales</b><span>Create and manage orders</span></button>
-      <button class="dash-action" onclick="goToEntry('training')"><b>🎓 Training</b><span>Manage trainees and certificates</span></button>
-    </div>
-  </div>
+  
 </div>
 
 <script>
@@ -516,7 +544,15 @@ a{color:#8a6b00}
     </table>
   </div>
 </div>
-<div class="panel"><h3>Recent Commercial Orders</h3><div class="tablewrap"><table><thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Product</th><th>Chicks Quantity</th><th>Total</th><th>Advance</th><th>Outstanding</th></tr></thead><tbody id="recentSales"></tbody></table></div></div>
+<div class="panel" id="recentCommercialOrdersPanel">
+<div class="recent-orders-heading">
+  <h3>Recent Commercial Orders</h3>
+  <button type="button" class="recent-orders-toggle" id="recentOrdersToggle" onclick="toggleRecentCommercialOrders()" aria-expanded="true" title="Collapse Recent Commercial Orders">⌃</button>
+</div>
+<div id="recentCommercialOrdersBody">
+  <div class="tablewrap"><table><thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Product</th><th>Chicks Quantity</th><th>Total</th><th>Advance</th><th>Outstanding</th></tr></thead><tbody id="recentSales"></tbody></table></div>
+</div>
+</div>
 </section>
 
 <section id="farmers" class="tab">
@@ -570,7 +606,7 @@ a{color:#8a6b00}
 <section id="sales" class="tab">
 <div class="panel"><h2>Commercial Sales - Chick Order</h2><p class="muted">Commercial customers are completely separate from integration farmers.</p>
 <div class="grid">
-<label>Customer Name<input id="sName" placeholder="Enter customer name"></label><label>Contact No.<input id="sPhone"></label><label>Address<textarea id="sAddress" style="min-height:45px"></textarea></label>
+<label>Customer Name<input id="sName" placeholder="Enter customer name" autocomplete="off"></label><label>Contact No.<input id="sPhone"></label><label>Address<textarea id="sAddress" style="min-height:45px"></textarea></label>
 <label>Type / Breed<select id="sProduct" onchange="toggleOtherBreed();autoScheduleChickDelivery()">
 <option>Broiler</option><option>BV380 Layer</option><option>Kuroiler</option><option>FFFG</option>
 <option>Brahma</option><option>Rainbow Rooster(RR)</option><option>Australorp</option>
@@ -721,21 +757,36 @@ a{color:#8a6b00}
 <section id="inventory" class="tab">
   <div class="panel" id="inventoryManagementTop">
     <h2>📦 Inventory Management</h2>
-    <p class="muted">Inventory is limited to <b>Feeds</b> and <b>Equipment</b> only.</p>
+    
 
-    <div class="cards">
-      <div class="card"><div class="dash-label">📦 Total Product Types</div><b id="invTotalItems">0</b></div>
-      <div class="card" style="cursor:pointer" onclick="setInventoryFilter('Feeds')"><div class="dash-label">🌾 Feed Types</div><b id="invFeedItems">0</b><small>Total different feed items</small></div>
-      <div class="card" style="cursor:pointer" onclick="setInventoryFilter('Equipment')"><div class="dash-label">🛠️ Equipment Types</div><b id="invEquipmentItems">0</b><small>Total different equipment items</small></div>
+    <div class="cards inventory-feed-summary">
+      <div class="card inventory-total-feed-card" style="grid-column:span 3">
+        <div class="dash-label">🌾 Total Feed</div>
+        <div class="inventory-feed-qty-grid">
+          <div><small>Pre-Starter</small><b id="invPreStarterQty">0</b><span>Bag</span></div>
+          <div><small>Starter</small><b id="invStarterQty">0</b><span>Bag</span></div>
+          <div><small>Finisher</small><b id="invFinisherQty">0</b><span>Bag</span></div>
+        </div>
+      </div>
+
+      <div class="card inventory-total-feed-card inventory-total-equipment-card" style="grid-column:span 3">
+        <div class="dash-label">🛠️ Total Equipment</div>
+        <div class="inventory-equipment-qty-grid">
+          <div><small>3 Litres Drinker</small><b id="inv3LDrinkerQty">0</b><span>Qty</span></div>
+          <div><small>8 Litre Drinker</small><b id="inv8LDrinkerQty">0</b><span>Qty</span></div>
+          <div><small>Auto Drinker</small><b id="invAutoDrinkerQty">0</b><span>Qty</span></div>
+          <div><small>8KG Feeder</small><b id="inv8KgFeederQty">0</b><span>Qty</span></div>
+          <div><small>Turbo Feeder</small><b id="invTurboFeederQty">0</b><span>Qty</span></div>
+          <div><small>Thermometer</small><b id="invThermometerQty">0</b><span>Qty</span></div>
+        </div>
+      </div>
+
       <div class="card" style="cursor:pointer" onclick="setInventoryFilter('low')"><div class="dash-label">⚠️ Low Stock</div><b id="invLowStock">0</b></div>
     </div>
-    <div style="margin-top:16px">
-      <h3>🌾 Feed Stock by Type</h3>
-      <div class="cards" id="invFeedTypeStockCards"></div>
-    </div>
+    
   </div>
-
-  <div class="panel">
+<div class="inventory-action-grid" id="inventoryActionGrid">
+<div class="panel">
     <h3 id="inventoryFormTitle">Add Inventory Item</h3>
     <div class="grid">
       <label>Category
@@ -764,13 +815,7 @@ a{color:#8a6b00}
       <button class="secondary" onclick="resetInventoryForm()">Clear</button>
     </div>
   </div>
-
-  <div class="panel" id="inventoryLowStockPanel">
-    <h3>⚠️ Low Stock Alerts</h3>
-    <div id="inventoryLowStockAlerts" class="notice">No low-stock items.</div>
-  </div>
-
-  <div class="panel">
+<div class="panel">
     <h3>Stock Update</h3>
     <div class="grid">
       <label>Category
@@ -795,6 +840,8 @@ a{color:#8a6b00}
     </div>
     <button class="primary" onclick="updateInventoryStock()">Update Stock</button>
   </div>
+</div>
+
 
   <div class="panel">
     <h3>Inventory Items</h3>
@@ -1080,7 +1127,25 @@ function farmer(id){return db.farmers.find(x=>x.id===id)}
 function batch(id){return db.batches.find(x=>x.id===id)}
 function farmerName(id){return farmer(id)?.name||"-"}
 function age(date){return Math.max(0,Math.floor((new Date()-new Date(date+"T00:00:00"))/86400000))}
-function tab(id,btn){document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));$(id).classList.add("active");document.querySelectorAll("#nav button").forEach(x=>x.classList.remove("active"));btn.classList.add("active");const g=btn.closest(".nav-group");if(g)g.classList.add("open");closeSideNav();renderAll()} function toggleSideNav(){document.body.classList.toggle("nav-open")} function closeSideNav(){document.body.classList.remove("nav-open")}
+function tab(id,btn){
+  const section=$(id);
+  if(!section)return;
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  section.classList.add("active");
+  document.querySelectorAll("#nav button").forEach(x=>x.classList.remove("active"));
+  if(!btn){
+    btn=Array.from(document.querySelectorAll("#nav button")).find(b=>
+      (b.getAttribute("onclick")||"").includes("tab('"+id+"'")
+    );
+  }
+  if(btn){
+    btn.classList.add("active");
+    const g=btn.closest(".nav-group");
+    if(g)g.classList.add("open");
+  }
+  if(typeof closeSideNav==="function")closeSideNav();
+  if(typeof renderAll==="function")renderAll();
+} function toggleSideNav(){document.body.classList.toggle("nav-open")} function closeSideNav(){document.body.classList.remove("nav-open")}
 
 async function login(){
   if(!cloudReady()){ $("loginMsg").textContent="Login service is not configured."; return; }
@@ -1173,15 +1238,126 @@ function goToEntry(tabId,fieldId){
 }
 function checkFilterBatches(){let fid=$('checkFarmer').value;let bs=db.batches.filter(b=>!fid||b.farmer===fid);$('checkBatch').innerHTML='<option value="all">All Batches</option>'+bs.map(b=>`<option value="${b.id}">${b.id} - ${b.breed}</option>`).join('')}
 function showFollowupReport(){let f=$('checkFarmer').value,bid=$('checkBatch').value,w=$('checkWeek').value;let rows=db.followups.filter(x=>(!f||x.farmer===f)&&(!bid||bid==='all'||x.batch===bid)&&(w==='all'||String(x.week)===w));$('followupReport').style.display='block';$('followupReport').innerHTML=rows.length?`<table><thead><tr><th>Farmer</th><th>Week</th><th>Batch</th><th>Date</th><th>Mortality</th><th>Weight</th><th>Water</th><th>Vaccination</th><th>Health</th><th>Remarks</th></tr></thead><tbody>${rows.sort((a,b)=>a.week-b.week).map(x=>`<tr><td>${farmerName(x.farmer)}</td><td>Week ${x.week}</td><td>${x.batch}</td><td>${x.date}</td><td>${x.mort}</td><td>${x.weight||'-'}</td><td>${x.water||'-'}</td><td>${x.vacc||'-'} / ${x.vaccStatus||'-'}</td><td>${x.health}</td><td>${x.remarks||''}</td></tr>`).join('')}</tbody></table>`:'<span class="muted">No follow-up records found.</span>'}
-function saveFarmer(){let name=$('fName').value.trim();if(!name)return alert('Enter farmer name');let obj={name,phone:$('fPhone').value,address:$('fAddress').value,district:$('fDistrict').value,farmLocation:$('fFarmLocation').value,sheds:Number($('fSheds').value||0),capacity:Number($('fCapacity').value||0),staff:$('fStaff').value,status:$('fStatus').value||'Active',liftingType:$('fLiftingType').value||'Lifting',reared:$('fReared').value,prevCapacity:Number($('fPrevCapacity').value||0),partner:$('fPartner').value,farmingType:$('fFarmingType').value,prevFeed:$('fPrevFeed').value,prevChicks:$('fPrevChicks').value,remarks:$('fRemarks').value};if(edit.farmer){Object.assign(farmer(edit.farmer),obj);edit.farmer=null;$('farmerSave').textContent='Save Farmer'}else{obj.id=makeId('F',db.farmers.length+1);obj.created=today();obj.createdAt=Date.now();db.farmers.push(obj)}resetForm('', ['fName','fPhone','fAddress','fFarmLocation','fSheds','fCapacity','fStaff','fPrevCapacity','fPartner','fPrevFeed','fPrevChicks','fRemarks']);$('fDistrict').value='Imphal East';$('fStatus').value='Active';$('fLiftingType').value='Lifting';$('fReared').value='No';toggleFarmerHistory();save()}
+function saveFarmer(){
+  const name=$('fName').value.trim();
+  if(!name)return alert('Enter farmer name');
+  const obj={
+    name,
+    phone:$('fPhone').value,
+    address:$('fAddress').value,
+    district:$('fDistrict').value,
+    farmLocation:$('fFarmLocation').value,
+    sheds:Number($('fSheds').value||0),
+    capacity:Number($('fCapacity').value||0),
+    staff:$('fStaff').value,
+    status:$('fStatus').value||'Active',
+    liftingType:$('fLiftingType').value||'Lifting',
+    reared:$('fReared').value,
+    prevCapacity:Number($('fPrevCapacity').value||0),
+    partner:$('fPartner').value,
+    farmingType:$('fFarmingType').value,
+    prevFeed:$('fPrevFeed').value,
+    prevChicks:$('fPrevChicks').value,
+    remarks:$('fRemarks').value
+  };
+  if(edit.farmer){
+    const target=farmer(edit.farmer);
+    if(!target)return alert('Farmer record not found. Please reopen it.');
+    Object.assign(target,obj);
+    edit.farmer=null;
+    $('farmerSave').textContent='Save Farmer';
+  }else{
+    let max=0;
+    db.farmers.forEach(f=>{
+      const m=String(f.id||'').match(/^F(\d+)$/i);
+      if(m)max=Math.max(max,Number(m[1]));
+    });
+    obj.id=makeId('F',max+1);
+    obj.created=today();
+    obj.createdAt=Date.now();
+    db.farmers.push(obj);
+  }
+  resetForm('', ['fName','fPhone','fAddress','fFarmLocation','fSheds','fCapacity','fStaff','fPrevCapacity','fPartner','fPrevFeed','fPrevChicks','fRemarks']);
+  $('fDistrict').value='Imphal East';
+  $('fStatus').value='Active';
+  $('fLiftingType').value='Lifting';
+  $('fReared').value='No';
+  toggleFarmerHistory();
+  save();
+}
 let farmerListStatus='All';
 function setFarmerStatusFilter(status){farmerListStatus=status||'All';if($('farmerStatusFilter'))$('farmerStatusFilter').value=farmerListStatus;renderFarmers($('farmerSearchBox')?.value||'')}
 function openFarmersByStatus(status){farmerListStatus=status||'All';goToEntry('farmers','fName');setTimeout(()=>{if($('farmerStatusFilter'))$('farmerStatusFilter').value=farmerListStatus;if($('farmerSearchBox'))$('farmerSearchBox').value='';renderFarmers('')},50)}
 function renderFarmers(q='',page){pageState.farmers_q=q;let a=db.farmers.map((f,i)=>({f,i})).filter(z=>farmerListStatus==='All'||(z.f.status||'Active')===farmerListStatus).filter(z=>(z.f.name+' '+z.f.phone+' '+z.f.address+' '+z.f.farmLocation+' '+z.f.district+' '+(z.f.status||'Active')).toLowerCase().includes((q||'').toLowerCase())).sort((a,b)=>(Number(b.f.createdAt||0)-Number(a.f.createdAt||0))||(b.i-a.i)).map(z=>z.f);paged('farmers',a,'farmerRows',f=>`<tr><td>${f.id}</td><td>${f.name}</td><td><b>${f.status||'Active'}</b></td><td>${f.phone}</td><td>${f.address||''}</td><td>${f.district||''}</td><td>${f.farmLocation||''}</td><td>${f.sheds||0}</td><td>${f.capacity||0}</td><td>${f.staff||''}</td><td><b>${f.liftingType||'Lifting'}</b></td><td class="actions"><button class="secondary" onclick="editFarmer('${f.id}')">Edit</button><button class="secondary" onclick="printFarmerReport('${f.id}')">Farmer Report</button><button class="secondary" onclick="whatsappFarmerReport('${f.id}')">WhatsApp</button><button class="danger" onclick="delFarmer('${f.id}')">Delete</button></td></tr>`,page)}
 function editFarmer(id){let f=farmer(id);if(!f)return;$('fName').value=f.name||'';$('fPhone').value=f.phone||'';$('fAddress').value=f.address||f.village||'';$('fDistrict').value=f.district||'Imphal East';$('fFarmLocation').value=f.farmLocation||f.farm||'';$('fSheds').value=f.sheds||0;$('fCapacity').value=f.capacity||0;$('fStaff').value=f.staff||'';$('fStatus').value=f.status||'Active';$('fLiftingType').value=f.liftingType||'Lifting';$('fReared').value=f.reared||'No';$('fPrevCapacity').value=f.prevCapacity||'';$('fPartner').value=f.partner||'';$('fFarmingType').value=f.farmingType||'Contract';$('fPrevFeed').value=f.prevFeed||'';$('fPrevChicks').value=f.prevChicks||'';$('fRemarks').value=f.remarks||'';toggleFarmerHistory();edit.farmer=id;$('farmerSave').textContent='Update Farmer';goToEntry('farmers','fName')}
-function delFarmer(id){if(confirm('Delete farmer and linked batches?')){db.farmers=db.farmers.filter(x=>x.id!==id);save()}}
+function delFarmer(id){
+  const f=farmer(id);
+  if(!f)return;
+  if(!confirm('Delete farmer and all linked batches, follow-ups and lifting records?'))return;
+  const linkedBatchIds=new Set(
+    (db.batches||[]).filter(b=>b.farmer===id).map(b=>b.id)
+  );
+  db.farmers=(db.farmers||[]).filter(x=>x.id!==id);
+  db.batches=(db.batches||[]).filter(b=>b.farmer!==id);
+  db.followups=(db.followups||[]).filter(x=>
+    x.farmer!==id && !linkedBatchIds.has(x.batch)
+  );
+  db.liftings=(db.liftings||[]).filter(x=>
+    x.farmer!==id && !linkedBatchIds.has(x.batch)
+  );
+  if(edit.farmer===id)edit.farmer=null;
+  save();
+}
 function formatDatePlus(d,n){let x=new Date(d+'T00:00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)}
-function saveBatch(){validateFarmerSearch('bFarmerSearch','bFarmer');if(!$('bFarmer').value)return alert('Please select a farmer name from the list');let farmerId=$('bFarmer').value,date=$('bDate').value;if(!date)return alert('Select placement date');let obj={farmer:farmerId,date,qty:Number($('bQty').value||0),breed:$('bBreed').value,rate:Number($('bRate').value||0),lift:formatDatePlus(date,42),preStarter:Number($('bPreStarter').value||0),starter:Number($('bStarter').value||0),finisher:Number($('bFinisher').value||0),health:$('bHealth').value,staff:$('bStaff').value,remarks:$('bRemarks').value,status:'Active'};if(!obj.qty)return alert('Enter chicks placed');if(edit.batch){obj.id=edit.batch;Object.assign(batch(edit.batch),obj);edit.batch=null;$('batchSave').textContent='Save Batch'}else{let n=db.batches.filter(x=>x.farmer===farmerId).length+1;obj.id='BLR-'+farmerId+'-'+String(n).padStart(3,'0');while(batch(obj.id))n++,obj.id='BLR-'+farmerId+'-'+String(n).padStart(3,'0');obj.createdAt=Date.now();db.batches.push(obj)}resetForm('', ['bQty','bRate','bPreStarter','bStarter','bFinisher','bStaff','bRemarks']);save()}
+function saveBatch(){
+  if(!validateFarmerSearch('bFarmerSearch','bFarmer')){
+    return alert('Please select a farmer name from the list');
+  }
+  const farmerId=$('bFarmer').value;
+  const date=$('bDate').value;
+  if(!farmerId)return alert('Please select a farmer name from the list');
+  if(!farmer(farmerId))return alert('Selected farmer was not found');
+  if(!date)return alert('Select placement date');
+
+  const obj={
+    farmer:farmerId,
+    date,
+    qty:Number($('bQty').value||0),
+    breed:$('bBreed').value,
+    rate:Number($('bRate').value||0),
+    lift:formatDatePlus(date,42),
+    preStarter:Number($('bPreStarter').value||0),
+    starter:Number($('bStarter').value||0),
+    finisher:Number($('bFinisher').value||0),
+    health:$('bHealth').value,
+    staff:$('bStaff').value,
+    remarks:$('bRemarks').value,
+    status:'Active'
+  };
+  if(obj.qty<=0)return alert('Enter a valid chicks placed quantity');
+  if(obj.rate<0)return alert('Rate cannot be negative');
+  if(obj.preStarter<0||obj.starter<0||obj.finisher<0)return alert('Feed quantities cannot be negative');
+
+  if(edit.batch){
+    const target=batch(edit.batch);
+    if(!target)return alert('Batch record not found. Please reopen it.');
+    obj.id=edit.batch;
+    Object.assign(target,obj);
+    edit.batch=null;
+    $('batchSave').textContent='Save Batch';
+  }else{
+    let n=db.batches.filter(x=>x.farmer===farmerId).length+1;
+    obj.id='BLR-'+farmerId+'-'+String(n).padStart(3,'0');
+    while(batch(obj.id)){
+      n++;
+      obj.id='BLR-'+farmerId+'-'+String(n).padStart(3,'0');
+    }
+    obj.createdAt=Date.now();
+    db.batches.push(obj);
+  }
+  resetForm('', ['bQty','bRate','bPreStarter','bStarter','bFinisher','bStaff','bRemarks']);
+  save();
+}
 let moduleFarmerFilters={batches:'',followups:'',lifting:''};
 function setModuleFarmerFilter(module,inputId){
   let el=$(inputId); if(!el)return;
@@ -1207,14 +1383,52 @@ function filterFollowBatches(){
 }
 function clearFollowup(){["uFarmerSearch","uMort","uWeight","uFeed","uVacc","uSymptoms","uRemarks"].forEach(x=>$(x).value="");$("uFarmer").innerHTML="";$("uFarmer").value="";$("uBatch").innerHTML="";$("uWeek").value="1";$("uDate").value=today();$("uWater").value="Normal";$("uVaccStatus").value="Not Due";$("uHealth").value="No";edit.follow=null;$("followSave").textContent="Save Follow-up"}
 function saveFollowup(){
-  validateFarmerSearch('uFarmerSearch','uFarmer');
- let batchId=$("uBatch").value, week=Number($("uWeek").value||1); if(!batchId)return alert("Select batch");
- let duplicate=db.followups.findIndex(x=>x.batch===batchId && Number(x.week||0)===week);
- let obj={batch:batchId,farmer:batch(batchId)?.farmer||"",week,date:$("uDate").value||today(),mort:Number($("uMort").value||0),weight:Number($("uWeight").value||0),feed:Number($("uFeed").value||0),water:$("uWater").value,vacc:$("uVacc").value,vaccStatus:$("uVaccStatus").value,health:$("uHealth").value,symptoms:$("uSymptoms").value,remarks:$("uRemarks").value};
- if(edit.follow!==null){Object.assign(db.followups[edit.follow],obj);edit.follow=null}
- else if(duplicate>=0){if(!confirm("This batch already has a Week "+week+" follow-up. Update it?"))return;Object.assign(db.followups[duplicate],obj)}
- else db.followups.push(obj);
- clearFollowup();save()
+  if(!validateFarmerSearch('uFarmerSearch','uFarmer')){
+    return alert('Please select a farmer name from the list');
+  }
+  const batchId=$("uBatch").value;
+  const week=Number($("uWeek").value||1);
+  if(!batchId)return alert("Select batch");
+  const linked=batch(batchId);
+  if(!linked)return alert("Selected batch was not found");
+  if(linked.farmer!==$("uFarmer").value)return alert("Selected batch does not belong to this farmer");
+
+  const duplicate=db.followups.findIndex(x=>
+    x.batch===batchId && Number(x.week||0)===week
+  );
+  const mort=Number($("uMort").value||0);
+  const weight=Number($("uWeight").value||0);
+  const feed=Number($("uFeed").value||0);
+  if(mort<0||weight<0||feed<0)return alert("Mortality, weight and feed cannot be negative");
+
+  const obj={
+    batch:batchId,
+    farmer:linked.farmer||"",
+    week,
+    date:$("uDate").value||today(),
+    mort,
+    weight,
+    feed,
+    water:$("uWater").value,
+    vacc:$("uVacc").value,
+    vaccStatus:$("uVaccStatus").value,
+    health:$("uHealth").value,
+    symptoms:$("uSymptoms").value,
+    remarks:$("uRemarks").value
+  };
+
+  if(edit.follow!==null){
+    if(!db.followups[edit.follow])return alert("Follow-up record not found. Please reopen it.");
+    Object.assign(db.followups[edit.follow],obj);
+    edit.follow=null;
+  }else if(duplicate>=0){
+    if(!confirm("This batch already has a Week "+week+" follow-up. Update it?"))return;
+    Object.assign(db.followups[duplicate],obj);
+  }else{
+    db.followups.push(obj);
+  }
+  clearFollowup();
+  save();
 }
 function renderFollowups(q='',page){pageState.followups_q=q;let fid=moduleFarmerFilters.followups||'';let a=db.followups.map((x,i)=>({x,i})).sort((a,b)=>(a.x.week||99)-(b.x.week||99)).filter(z=>(farmerFilterMatch(batch(z.x.batch)?.farmer,fid))&&(z.x.batch+' '+farmerName(batch(z.x.batch)?.farmer)+' week '+(z.x.week||'')).toLowerCase().includes((q||'').toLowerCase()));paged('followups',a,'followRows',z=>{let x=z.x,i=z.i;return `<tr><td>Week ${x.week||'-'}</td><td>${x.date}</td><td>${x.batch}</td><td>${farmerName(batch(x.batch)?.farmer)}</td><td>${age(batch(x.batch)?.date||x.date)} d</td><td>${x.mort}</td><td>${x.weight||''}</td><td>${x.water||'-'}</td><td>${x.vacc||'-'} / ${x.vaccStatus||'-'}</td><td class="${x.health==='Yes'?'bad':'good'}">${x.health}</td><td>${x.symptoms||''}</td><td class="actions"><button class="secondary" onclick="editFollow(${i})">Edit</button><button class="danger" onclick="delFollow(${i})">Delete</button></td></tr>`},page)}
 function editFollow(i){let x=db.followups[i];if(!x)return;let linkedBatch=batch(x.batch);let farmerId=linkedBatch?.farmer||x.farmer||"";if(farmerId&&!farmer(farmerId))farmerId=x.farmer&&farmer(x.farmer)?x.farmer:"";x.farmer=farmerId;$("uFarmer").innerHTML=farmerId?`<option value="${escapeHtml(farmerId)}">${escapeHtml(farmerName(farmerId))}</option>`:"";$("uFarmer").value=farmerId;setFarmerSearch('uFarmerSearch',farmerId);filterFollowBatches();$("uBatch").value=x.batch;$("uWeek").value=x.week||1;$("uDate").value=x.date||today();$("uMort").value=x.mort||0;$("uWeight").value=x.weight||"";$("uFeed").value=x.feed||"";$("uWater").value=x.water||"Normal";$("uVacc").value=x.vacc||"";$("uVaccStatus").value=x.vaccStatus||"Not Due";$("uHealth").value=x.health||"No";$("uSymptoms").value=x.symptoms||"";$("uRemarks").value=x.remarks||"";edit.follow=i;$("followSave").textContent="Update Follow-up";goToEntry('followups','uFarmerSearch');requestAnimationFrame(()=>{setFarmerSearch('uFarmerSearch',farmerId);filterFollowBatches();$("uBatch").value=x.batch;})}
@@ -1251,8 +1465,133 @@ function autoScheduleChickDelivery(){
 
 function handleCommercialStatusChange(){const cancelled=$("sStatus")?.value==="Cancelled";["sDeliveryDateWrap","sStaffWrap"].forEach(id=>{const el=$(id);if(el)el.style.display=cancelled?"none":""});if(cancelled){$("sDeliveryDate").value="";$("sStaff").value="";}else if(!edit.sale){autoScheduleChickDelivery();}}
 
-function saveSale(){let name=$('sName').value.trim(),qty=Number($('sQty').value||0),rate=Number($('sRate').value||0),advance=Number($('sAdvance').value||0);if(!name)return alert('Enter customer name');if(qty<=0)return alert('Enter quantity');let product=$('sProduct').value,otherBreed=$('sOtherBreed').value.trim();if(product==='Other'&&!otherBreed)return alert('Please specify the other breed/type');let obj={name,phone:$('sPhone').value,address:$('sAddress').value,product,otherBreed:product==='Other'?otherBreed:'',qty,rate,total:qty*rate,advance,balance:Math.max(0,qty*rate-advance),deliveryDate:$('sStatus').value==='Cancelled'?'':$('sDeliveryDate').value,staff:$('sStatus').value==='Cancelled'?'':$('sStaff').value,description:$('sDescription').value.trim(),status:$('sStatus').value};if(edit.sale){Object.assign(db.sales.find(x=>x.id===edit.sale),obj);edit.sale=null;$('salesSave').textContent='Save Order'}else{obj.id=makeId('ORD',db.sales.length+1);obj.date=today();obj.createdAt=Date.now();db.sales.push(obj)}resetForm('', ['sName','sPhone','sAddress','sQty','sRate','sAdvance','sStaff','sOtherBreed','sDescription']);$('sProduct').value='Broiler';$('sStatus').value='Pending';toggleOtherBreed();handleCommercialStatusChange();autoScheduleChickDelivery();calcSale();save()}
-function renderSales(q='',page){pageState.sales_q=q;q=(q||'').toLowerCase();let chickFilter=$('salesChickFilter')?.value||'All';let a=db.sales.map((o,i)=>({o,i})).filter(z=>(!pageState.salesFilter||pageState.salesFilter==='All'||z.o.status===pageState.salesFilter)&&(chickFilter==='All'||(chickFilter==='Other'?z.o.product==='Other':saleBreed(z.o)===chickFilter))&&(z.o.id+' '+z.o.name+' '+z.o.phone+' '+saleBreed(z.o)+' '+(z.o.description||'')).toLowerCase().includes(q)).sort((a,b)=>(Number(b.o.createdAt||0)-Number(a.o.createdAt||0))||(b.i-a.i)).map(z=>z.o);['Pending','Complete','Cancelled'].forEach(st=>{let el=$('order'+st);if(el)el.textContent=db.sales.filter(x=>x.status===st).length});paged('sales',a,'salesRows',o=>{let bal=Math.max(0,o.total-o.advance);let reportBtn=(o.status==='Pending'||o.status==='Complete')?`<button class="secondary" onclick="printOrderStatusReport('${o.id}')">Report</button>`:'';return `<tr><td>${o.id}</td><td>${o.date}</td><td>${o.name}</td><td>${o.phone}</td><td>${o.address||'-'}</td><td>${o.description||'-'}</td><td>${saleBreed(o)}</td><td>${o.qty}</td><td>${money(o.rate)}</td><td>${money(o.total)}</td><td>${money(o.advance)}</td><td class="${bal?'bad':'good'}">${money(bal)}</td><td>${o.status==='Cancelled'?'-':(o.deliveryDate||'-')}</td><td>${o.status==='Complete'?'Delivered':o.status}</td><td class="actions"><button class="secondary" onclick="editSale('${o.id}')">Edit</button><button class="primary" onclick="setOrderStatus('${o.id}','Complete')">Delivered</button>${reportBtn}<button class="danger" onclick="setOrderStatus('${o.id}','Cancelled')">Cancel</button><button class="danger" onclick="delSale('${o.id}')">Delete</button></td></tr>`},page)}
+function saveSale(){
+  const name=$('sName').value.trim();
+  const qty=Number($('sQty').value||0);
+  const rate=Number($('sRate').value||0);
+  const advance=Number($('sAdvance').value||0);
+
+  if(!name)return alert('Enter customer name');
+  if(qty<=0)return alert('Enter a valid quantity');
+  if(rate<0)return alert('Rate cannot be negative');
+  if(advance<0)return alert('Advance cannot be negative');
+
+  const total=qty*rate;
+  if(advance>total)return alert('Advance cannot be more than the total amount');
+
+  const product=$('sProduct').value;
+  const otherBreed=$('sOtherBreed').value.trim();
+  if(product==='Other'&&!otherBreed)return alert('Please specify the other breed/type');
+
+  const obj={
+    name,
+    phone:$('sPhone').value,
+    address:$('sAddress').value,
+    product,
+    otherBreed:product==='Other'?otherBreed:'',
+    qty,
+    rate,
+    total,
+    advance,
+    balance:Math.max(0,total-advance),
+    deliveryDate:$('sStatus').value==='Cancelled'?'':$('sDeliveryDate').value,
+    staff:$('sStatus').value==='Cancelled'?'':$('sStaff').value,
+    description:$('sDescription').value.trim(),
+    status:$('sStatus').value
+  };
+
+  if(edit.sale!==null&&edit.sale!==undefined){
+    let target=null;
+    if(
+      Number.isInteger(edit.saleIndex)&&
+      db.sales[edit.saleIndex]&&
+      String(db.sales[edit.saleIndex].id)===String(edit.sale)
+    ){
+      target=db.sales[edit.saleIndex];
+    }else{
+      target=db.sales.find(x=>String(x.id)===String(edit.sale));
+    }
+    if(!target)return alert('The selected order could not be found. Please reopen the order and try again.');
+    Object.assign(target,obj);
+    edit.sale=null;
+    edit.saleIndex=null;
+    $('salesSave').textContent='Save Order';
+  }else{
+    let maxOrderNo=0;
+    (db.sales||[]).forEach(s=>{
+      const m=String(s.id||'').match(/^ORD(\d+)$/i);
+      if(m)maxOrderNo=Math.max(maxOrderNo,Number(m[1]));
+    });
+    obj.id=makeId('ORD',maxOrderNo+1);
+    obj.date=today();
+    obj.createdAt=Date.now();
+    db.sales.push(obj);
+  }
+
+  resetForm('', ['sName','sPhone','sAddress','sQty','sRate','sAdvance','sStaff','sOtherBreed','sDescription']);
+  $('sProduct').value='Broiler';
+  $('sStatus').value='Pending';
+  toggleOtherBreed();
+  handleCommercialStatusChange();
+  autoScheduleChickDelivery();
+  calcSale();
+  save();
+}
+function renderSales(q='',page){
+  pageState.sales_q=q;
+  q=(q||'').toLowerCase();
+  const chickFilter=$('salesChickFilter')?.value||'All';
+
+  const a=db.sales
+    .map((o,i)=>({o,i}))
+    .filter(z=>
+      (!pageState.salesFilter||pageState.salesFilter==='All'||z.o.status===pageState.salesFilter) &&
+      (chickFilter==='All'||(chickFilter==='Other'?z.o.product==='Other':saleBreed(z.o)===chickFilter)) &&
+      (z.o.id+' '+z.o.name+' '+z.o.phone+' '+saleBreed(z.o)+' '+(z.o.description||'')).toLowerCase().includes(q)
+    )
+    .sort((a,b)=>
+      (Number(b.o.createdAt||0)-Number(a.o.createdAt||0)) ||
+      (b.i-a.i)
+    );
+
+  ['Pending','Complete','Cancelled'].forEach(st=>{
+    const el=$('order'+st);
+    if(el)el.textContent=db.sales.filter(x=>x.status===st).length;
+  });
+
+  paged('sales',a,'salesRows',z=>{
+    const o=z.o;
+    const rowIndex=z.i;
+    const bal=Math.max(0,Number(o.total||0)-Number(o.advance||0));
+    const reportBtn=(o.status==='Pending'||o.status==='Complete')
+      ? `<button class="secondary" onclick="printOrderStatusReport('${o.id}',${rowIndex})">Report</button>`
+      : '';
+
+    return `<tr>
+      <td>${o.id}</td>
+      <td>${o.date}</td>
+      <td>${o.name}</td>
+      <td>${o.phone}</td>
+      <td>${o.address||'-'}</td>
+      <td>${o.description||'-'}</td>
+      <td>${saleBreed(o)}</td>
+      <td>${o.qty}</td>
+      <td>${money(o.rate)}</td>
+      <td>${money(o.total)}</td>
+      <td>${money(o.advance)}</td>
+      <td class="${bal?'bad':'good'}">${money(bal)}</td>
+      <td>${o.status==='Cancelled'?'-':(o.deliveryDate||'-')}</td>
+      <td>${o.status==='Complete'?'Delivered':o.status}</td>
+      <td class="actions">
+        <button class="secondary" onclick="editSale('${o.id}',${rowIndex})">Edit</button>
+        <button class="primary" onclick="setOrderStatus('${o.id}','Complete',${rowIndex})">Delivered</button>
+        ${reportBtn}
+        <button class="danger" onclick="setOrderStatus('${o.id}','Cancelled',${rowIndex})">Cancel</button>
+        <button class="danger" onclick="delSale('${o.id}',${rowIndex})">Delete</button>
+      </td>
+    </tr>`;
+  },page);
+}
 
 function printOrderStatusReport(id){
   const o=db.sales.find(x=>x.id===id);
@@ -1350,16 +1689,45 @@ function sendOrderStatusSummary(type){
   msg+='\nThank you.\nManipur Poultry Farm';
   whatsapp(SCHEDULE_PHONE,msg);
 }
-function setOrderStatus(id,status){let o=db.sales.find(x=>x.id===id);if(o){o.status=status;if(status==='Cancelled'){o.deliveryDate='';o.staff='';}if(edit.sale===id){$("sStatus").value=status;handleCommercialStatusChange();}save()}}
-function editSale(id){
-let o=db.sales.find(x=>x.id===id);if(!o)return;
-$("sName").value=o.name;$("sPhone").value=o.phone||"";$("sAddress").value=o.address||"";
-$("sProduct").value=o.product||"Other";$("sOtherBreed").value=o.otherBreed||"";toggleOtherBreed();
-$("sQty").value=o.qty;$("sRate").value=o.rate;$("sAdvance").value=o.advance||0;$("sDeliveryDate").value=o.deliveryDate||"";
-$("sStaff").value=o.staff||"";$("sDescription").value=o.description||"";$("sStatus").value=o.status||"Pending";handleCommercialStatusChange();
-edit.sale=id;$("salesSave").textContent="Update Order";calcSale();goToEntry('sales','sName')
+function setOrderStatus(id,status,rowIndex){
+  let o=null;
+  if(Number.isInteger(rowIndex)&&db.sales[rowIndex]&&String(db.sales[rowIndex].id)===String(id)){
+    o=db.sales[rowIndex];
+  }else{
+    o=db.sales.find(x=>String(x.id)===String(id));
+  }
+  if(!o)return;
+  o.status=status;
+  if(status==='Cancelled'){
+    o.deliveryDate='';
+    o.staff='';
+  }
+  if(edit.sale===o.id && (!Number.isInteger(edit.saleIndex)||db.sales[edit.saleIndex]===o)){
+    $('sStatus').value=status;
+    handleCommercialStatusChange();
+  }
+  save();
 }
-function delSale(id){if(confirm("Delete this commercial order?")){db.sales=db.sales.filter(x=>x.id!==id);save()}}
+function editSale(id,rowIndex){
+  return window.mpfCommercialEditOrder ? window.mpfCommercialEditOrder(id,rowIndex) : false;
+}
+function delSale(id,rowIndex){
+  let idx=-1;
+  if(Number.isInteger(rowIndex)&&db.sales[rowIndex]&&String(db.sales[rowIndex].id)===String(id)){
+    idx=rowIndex;
+  }else{
+    idx=db.sales.findIndex(x=>String(x.id)===String(id));
+  }
+  if(idx<0)return;
+  if(!confirm("Delete this commercial order?"))return;
+  if(edit.saleIndex===idx){
+    edit.sale=null;
+    edit.saleIndex=null;
+    if($('salesSave'))$('salesSave').textContent='Save Order';
+  }
+  db.sales.splice(idx,1);
+  save();
+}
 function renderCustomers(q='',page){if(typeof q==='number'){page=q;q=pageState.customers_q||'';}pageState.customers_q=q||'';let map={};db.sales.forEach((o,i)=>{let k=(o.phone||'')+'|'+o.name;if(!map[k])map[k]={name:o.name,phone:o.phone,address:o.address,breeds:{},rates:{},chicks:0,lastDate:'',orders:0,sales:0,due:0,latestAt:0,latestIndex:i};map[k].orders++;map[k].sales+=Number(o.total||0);map[k].due+=Math.max(0,Number(o.total||0)-Number(o.advance||0));map[k].chicks+=Number(o.qty||0);let br=saleBreed(o);map[k].breeds[br]=(map[k].breeds[br]||0)+Number(o.qty||0);map[k].rates[br]=Number(o.rate||0);if((o.date||'')>map[k].lastDate)map[k].lastDate=o.date;if(Number(o.createdAt||0)>=map[k].latestAt){map[k].latestAt=Number(o.createdAt||0);map[k].latestIndex=i;map[k].address=o.address;map[k].phone=o.phone}});let a=Object.values(map).filter(x=>(x.name+' '+(x.phone||'')+' '+(x.address||'')+' '+Object.keys(x.breeds).join(' ')).toLowerCase().includes((q||'').toLowerCase())).sort((a,b)=>(b.latestAt-a.latestAt)||(b.latestIndex-a.latestIndex));paged('customers',a,'customerRows',x=>{let breeds=Object.entries(x.breeds).map(([b,q])=>`${b} (${q})`).join(', '),rates=Object.entries(x.rates).map(([b,r])=>`${b}: ${money(r)}`).join(', ');return `<tr><td>${x.name}</td><td>${x.phone}</td><td>${x.address||''}</td><td>${breeds}</td><td>${rates}</td><td>${x.chicks}</td><td>${x.lastDate||'-'}</td><td>${x.orders}</td><td>${money(x.sales)}</td><td class="${x.due?'bad':'good'}">${money(x.due)}</td></tr>`},page)}
 function totalMortality(batchId){return db.followups.filter(x=>x.batch===batchId).reduce((n,x)=>n+Number(x.mort||0),0)}
 function liftedQty(batchId,excludeIndex=null){return db.liftings.reduce((n,x,i)=>n+(x.batch===batchId&&["Partially Completed","Completed"].includes(String(x.status||""))&&i!==excludeIndex?Number(x.qty||0):0),0)}
@@ -1374,7 +1742,7 @@ function toggleLiftingOutlet(){
   if(wrap)wrap.style.display=type==="Other Outlet"?"block":"none";
   if(type!=="Other Outlet" && $("lOtherOutlet"))$("lOtherOutlet").value="";
 }
-function saveLifting(){if(!$("lBatch").value)return alert("Select batch");updateLiftingAuto();let outletType=$("lOutletType")?.value||"Our Outlet",otherOutlet=$("lOtherOutlet")?.value.trim()||"";if(outletType==="Other Outlet"&&!otherOutlet)return alert("Enter the other outlet name.");let a=Number($("lAvailable").value||0),q=Number($("lQty").value||0),st=$("lStatus").value;if(q<0||q>a)return alert("Birds lifted cannot exceed available birds");if(st==="Scheduled"){if(!$("lConfirmDate").value)return alert("Enter Farmer Confirm Date before saving a scheduled lifting.");}else{if(q<=0)return alert("Enter Birds Lifted.");if(!["Partially Completed","Completed"].includes(st))return alert("Select a valid lifting status.");if(st==="Completed"&&q!==a)return alert("For Completed status, Birds Lifted must equal all available birds ("+a+").");if(st==="Partially Completed"&&q>=a)return alert("Use Completed when all available birds are lifted.");if(!Number($("lWeight").value||0)||!Number($("lRate").value||0))return alert("Enter total live weight and rate/kg for completed/partial lifting.");}toggleLiftingConfirmDate();let b=batch($("lBatch").value),obj={batch:$("lBatch").value,farmer:b.farmer,date:$("lDate").value||today(),confirmDate:$("lConfirmDate").value||"",age:Number($("lAge").value||0),available:a,qty:q,weight:Number($("lWeight").value||0),rate:Number($("lRate").value||0),total:Number($("lWeight").value||0)*Number($("lRate").value||0),agent:$("lAgent").value,outletType,otherOutlet:outletType==="Other Outlet"?otherOutlet:"",vehicle:$("lVehicle").value,status:st,sendCount:(edit.lift!==null?Number(db.liftings[edit.lift].sendCount||0):0),lastSentAt:(edit.lift!==null?db.liftings[edit.lift].lastSentAt||"":"" )};if(edit.lift!==null){Object.assign(db.liftings[edit.lift],obj);edit.lift=null;$("liftSave").textContent="Save Lifting"}else db.liftings.push(obj);["lWeight","lRate","lAgent","lVehicle","lQty","lConfirmDate","lOtherOutlet"].forEach(x=>$(x).value="");$("lOutletType").value="Our Outlet";toggleLiftingOutlet();$("lStatus").value="Scheduled";toggleLiftingConfirmDate();save()}
+function saveLifting(){if(!validateLiftingBatchSearch())return;if(!$("lBatch").value)return alert("Select batch");updateLiftingAuto();let outletType=$("lOutletType")?.value||"Our Outlet",otherOutlet=$("lOtherOutlet")?.value.trim()||"";if(outletType==="Other Outlet"&&!otherOutlet)return alert("Enter the other outlet name.");let a=Number($("lAvailable").value||0),q=Number($("lQty").value||0),st=$("lStatus").value;if(q<0||q>a)return alert("Birds lifted cannot exceed available birds");if(st==="Scheduled"){if(!$("lConfirmDate").value)return alert("Enter Farmer Confirm Date before saving a scheduled lifting.");}else{if(q<=0)return alert("Enter Birds Lifted.");if(!["Partially Completed","Completed"].includes(st))return alert("Select a valid lifting status.");if(st==="Completed"&&q!==a)return alert("For Completed status, Birds Lifted must equal all available birds ("+a+").");if(st==="Partially Completed"&&q>=a)return alert("Use Completed when all available birds are lifted.");if(!Number($("lWeight").value||0)||!Number($("lRate").value||0))return alert("Enter total live weight and rate/kg for completed/partial lifting.");}toggleLiftingConfirmDate();let b=batch($("lBatch").value),obj={batch:$("lBatch").value,farmer:b.farmer,date:$("lDate").value||today(),confirmDate:$("lConfirmDate").value||"",age:Number($("lAge").value||0),available:a,qty:q,weight:Number($("lWeight").value||0),rate:Number($("lRate").value||0),total:Number($("lWeight").value||0)*Number($("lRate").value||0),agent:$("lAgent").value,outletType,otherOutlet:outletType==="Other Outlet"?otherOutlet:"",vehicle:$("lVehicle").value,status:st,sendCount:(edit.lift!==null?Number(db.liftings[edit.lift].sendCount||0):0),lastSentAt:(edit.lift!==null?db.liftings[edit.lift].lastSentAt||"":"" )};if(edit.lift!==null){Object.assign(db.liftings[edit.lift],obj);edit.lift=null;$("liftSave").textContent="Save Lifting"}else db.liftings.push(obj);["lWeight","lRate","lAgent","lVehicle","lQty","lConfirmDate","lOtherOutlet"].forEach(x=>$(x).value="");$("lOutletType").value="Our Outlet";toggleLiftingOutlet();$("lStatus").value="Scheduled";toggleLiftingConfirmDate();save()}
 function setLiftingFilter(status){liftingFilter=status;pageState.lifting=1;renderLifting(1)}
 function sendScheduledLiftingDetails(index){
   const x=db.liftings[index];
@@ -1469,12 +1837,36 @@ function selectFarmerFromSearch(inputId,selectId){
   else {sel.value='';renderFarmerSearchResults(inputId,selectId);}
 }
 function validateFarmerSearch(inputId,selectId){
-  let input=$(inputId),sel=$(selectId);if(!input||!sel)return true;
-  let term=input.value.trim().toLowerCase();
-  if(!term){sel.value='';hideFarmerSearchDropdown();return true;}
-  let exact=db.farmers.find(f=>String(f.name||'').trim().toLowerCase()===term && (inputId!=='lFarmerSearch'||farmerIsLifting(f)));
-  if(exact){sel.innerHTML=`<option value="${escapeHtml(exact.id)}">${escapeHtml(exact.name)}</option>`;sel.value=exact.id;input.value=exact.name;hideFarmerSearchDropdown();return true;}
-  hideFarmerSearchDropdown();return false;
+  const input=$(inputId),sel=$(selectId);
+  if(!input||!sel)return true;
+  const term=input.value.trim().toLowerCase();
+  if(!term){
+    sel.value='';
+    sel.innerHTML='';
+    hideFarmerSearchDropdown();
+    return true;
+  }
+  const exact=db.farmers.find(f=>
+    String(f.name||'').trim().toLowerCase()===term &&
+    (inputId!=='lFarmerSearch'||farmerIsLifting(f))
+  );
+  if(exact){
+    sel.innerHTML=`<option value="${escapeHtml(exact.id)}">${escapeHtml(exact.name)}</option>`;
+    sel.value=exact.id;
+    input.value=exact.name;
+    hideFarmerSearchDropdown();
+    return true;
+  }
+  sel.value='';
+  sel.innerHTML='';
+  if(inputId==='uFarmerSearch' && $('uBatch')) $('uBatch').innerHTML='';
+  if(inputId==='checkFarmerSearch' && $('checkBatch')) $('checkBatch').innerHTML='';
+  if(inputId==='lFarmerSearch'){
+    if($('lBatch')) $('lBatch').value='';
+    if($('lBatchSearch')) $('lBatchSearch').value='';
+  }
+  hideFarmerSearchDropdown();
+  return false;
 }
 function setFarmerSearch(inputId,farmerId){let input=$(inputId);if(!input)return;let f=farmer(farmerId);input.value=f?f.name:'';let map={bFarmerSearch:'bFarmer',uFarmerSearch:'uFarmer',checkFarmerSearch:'checkFarmer',lFarmerSearch:'lFarmer'},sel=$(map[inputId]);if(sel&&f){sel.innerHTML=`<option value="${escapeHtml(f.id)}">${escapeHtml(f.name)}</option>`;sel.value=f.id;}hideFarmerSearchDropdown();}
 function initFarmerSearchInputs(){
@@ -1491,18 +1883,10 @@ function initFarmerSearchInputs(){
   });
   document.addEventListener('mousedown',e=>{if(farmerSearchDropdown&&farmerSearchActiveInput&&!farmerSearchDropdown.contains(e.target)&&e.target!==farmerSearchActiveInput)hideFarmerSearchDropdown();});
 }
-function selectCustomerFromSearch(){
-  let input=$('sName');if(!input)return;let term=input.value.trim().toLowerCase();
-  if(!term)return;
-  let exact=db.sales.find(o=>String(o.name||'').trim().toLowerCase()===term || String(o.phone||'').replace(/\D/g,'')===term.replace(/\D/g,''));
-  if(exact){input.value=exact.name; if($('sPhone'))$('sPhone').value=exact.phone||''; if($('sAddress'))$('sAddress').value=exact.address||'';}
-}
+function selectCustomerFromSearch(){ return true; }
 function validateCustomerSearch(){
-  let input=$('sName');if(!input)return true;let term=input.value.trim().toLowerCase();
-  if(!term)return true;
-  let exact=db.sales.find(o=>String(o.name||'').trim().toLowerCase()===term || String(o.phone||'').replace(/\D/g,'')===term.replace(/\D/g,''));
-  if(exact){input.value=exact.name; if($('sPhone'))$('sPhone').value=exact.phone||''; if($('sAddress'))$('sAddress').value=exact.address||'';return true;}
-  input.value='';alert('Please select a customer name from the list.');return false;
+  const input=$('sName');
+  return !!(input && input.value.trim());
 }
 function liftingBatchLabel(x){
   return `${x.id} - ${farmerName(x.farmer)} - ${x.breed||'Broiler'}`;
@@ -1925,18 +2309,30 @@ function resetInventoryForm(){
 function saveInventoryItem(){
   const name=$('invName')?.value.trim();
   if(!name)return alert('Enter item name');
+
   const category=$('invCategory')?.value;
   if(!['Feeds','Equipment'].includes(category))return alert('Only Feeds and Equipment are allowed');
+
+  const openingStock=Number($('invOpeningStock')?.value||0);
+  const lowLevel=Number($('invLowLevel')?.value||0);
+  const purchaseRate=Number($('invPurchaseRate')?.value||0);
+  const sellingRate=Number($('invSellingRate')?.value||0);
+
+  if(openingStock<0)return alert('Opening stock cannot be negative');
+  if(lowLevel<0)return alert('Low stock level cannot be negative');
+  if(purchaseRate<0||sellingRate<0)return alert('Inventory rates cannot be negative');
+
   const now=new Date().toISOString();
+
   if(edit.inventory){
     const x=inventoryItem(edit.inventory);
-    if(!x)return;
+    if(!x)return alert('Inventory item not found. Please reopen it.');
     x.category=category;
     x.name=name;
     x.unit=$('invUnit').value;
-    x.lowLevel=Number($('invLowLevel').value||0);
-    x.purchaseRate=Number($('invPurchaseRate').value||0);
-    x.sellingRate=Number($('invSellingRate').value||0);
+    x.lowLevel=lowLevel;
+    x.purchaseRate=purchaseRate;
+    x.sellingRate=sellingRate;
     x.updatedAt=now;
   }else{
     db.inventory.push({
@@ -1944,10 +2340,10 @@ function saveInventoryItem(){
       category,
       name,
       unit:$('invUnit').value,
-      stock:Number($('invOpeningStock').value||0),
-      lowLevel:Number($('invLowLevel').value||0),
-      purchaseRate:Number($('invPurchaseRate').value||0),
-      sellingRate:Number($('invSellingRate').value||0),
+      stock:openingStock,
+      lowLevel,
+      purchaseRate,
+      sellingRate,
       createdAt:Date.now(),
       updatedAt:now
     });
@@ -2126,6 +2522,7 @@ function addPOSToCart(){
   const rate=Number($('posRate')?.value||0);
   if(!id)return alert('Select an item');
   if(qty<=0)return alert('Enter valid quantity');
+  if(rate<0)return alert('Rate cannot be negative');
   const x=inventoryItem(id); if(!x)return alert('Item not found');
 
   const existing=posCart.find(c=>c.itemId===id);
@@ -3023,6 +3420,846 @@ th{background:#111!important;color:#f5c400!important}tbody tr:hover{background:#
 .cert-badge{background:#fff4b3!important;color:#111!important;border:1px solid #f5c400!important}.cert-preview{background:#fffdf0!important;border-color:#e0b400!important}
 a{color:#8a6b00}
 </style>
+
+<style id="mpf-clean-layout-v2">
+/* ===== Correct, compact header ===== */
+header{
+  min-height:72px!important;
+  padding:9px 18px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+}
+header > div:first-child{
+  display:grid!important;
+  grid-template-columns:auto auto 1fr!important;
+  grid-template-rows:auto auto!important;
+  align-items:center!important;
+  column-gap:10px!important;
+  min-width:0!important;
+}
+header > div:first-child .nav-toggle{
+  grid-row:1 / span 2!important;
+  align-self:center!important;
+}
+header > div:first-child .mpf-report-logo{
+  grid-row:1 / span 2!important;
+  width:48px!important;
+  height:48px!important;
+  margin:0!important;
+  padding:2px!important;
+  border-radius:10px!important;
+  object-fit:contain!important;
+  box-shadow:none!important;
+  background:#fff!important;
+}
+header > div:first-child h1{
+  grid-column:3!important;
+  margin:0!important;
+  font-size:20px!important;
+  line-height:1.15!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+header > div:first-child small{
+  grid-column:3!important;
+  margin:2px 0 0!important;
+  font-size:11px!important;
+  line-height:1.2!important;
+  opacity:.86!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+header .topright{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:8px!important;
+  flex-wrap:wrap!important;
+  min-width:0!important;
+}
+header .topright .secondary{
+  margin:0!important;
+  padding:7px 10px!important;
+}
+header .notif-bell{
+  min-width:38px!important;
+  min-height:38px!important;
+}
+
+/* ===== Navigation fits cleanly ===== */
+#nav{
+  padding:7px 12px!important;
+  gap:4px!important;
+}
+#nav button{
+  min-height:38px!important;
+  padding:7px 10px!important;
+  font-size:12px!important;
+}
+
+/* ===== Main content uses available width ===== */
+main{
+  max-width:1600px!important;
+  padding:14px 18px 30px!important;
+}
+#dashboard{
+  padding:0!important;
+}
+#dashboard .dash-wrap{
+  max-width:none!important;
+  width:100%!important;
+}
+
+/* ===== Cleaner, shorter dashboard hero ===== */
+#dashboard .dash-hero{
+  padding:16px 18px!important;
+  margin-bottom:12px!important;
+  border-radius:14px!important;
+  min-height:0!important;
+}
+#dashboard .dash-hero h1{
+  font-size:24px!important;
+  margin-bottom:3px!important;
+}
+#dashboard .dash-hero p{
+  font-size:12px!important;
+}
+#dashboard .dash-date{
+  gap:4px!important;
+}
+#dashboard .dash-status{
+  font-size:11px!important;
+}
+
+/* ===== Compact KPI cards: more visible without scrolling ===== */
+#dashboard .dash-grid{
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  gap:10px!important;
+  margin-bottom:12px!important;
+}
+#dashboard .dash-card{
+  border-radius:12px!important;
+  padding:12px!important;
+}
+#dashboard .dash-kpi{
+  min-height:105px!important;
+}
+#dashboard .dash-kpi .dash-icon{
+  font-size:18px!important;
+  margin-bottom:7px!important;
+}
+#dashboard .dash-kpi .label{
+  font-size:11px!important;
+  line-height:1.2!important;
+}
+#dashboard .dash-kpi .value{
+  font-size:24px!important;
+  line-height:1.05!important;
+  margin:5px 0 3px!important;
+}
+#dashboard .dash-kpi .sub{
+  font-size:10px!important;
+  line-height:1.25!important;
+}
+
+/* ===== Charts / operation panels ===== */
+#dashboard .dash-main{
+  grid-template-columns:minmax(0,1.55fr) minmax(300px,.85fr)!important;
+  gap:10px!important;
+  margin-bottom:12px!important;
+}
+#dashboard .dash-title{
+  margin-bottom:6px!important;
+}
+#dashboard .dash-title h3{
+  font-size:14px!important;
+}
+#dashboard .dash-title span{
+  font-size:11px!important;
+}
+#dashboard .dash-bars{
+  height:160px!important;
+  padding-top:4px!important;
+}
+#dashboard .dash-list{
+  gap:6px!important;
+}
+#dashboard .dash-row{
+  padding:8px 9px!important;
+  font-size:11px!important;
+}
+#dashboard .dash-actions{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+#dashboard .dash-action{
+  min-height:70px!important;
+  padding:9px!important;
+}
+#dashboard .dash-action b{
+  font-size:12px!important;
+}
+#dashboard .dash-action span{
+  font-size:10px!important;
+}
+
+/* Remove old duplicate KPI row under the professional dashboard */
+#dashboard > .cards{
+  display:none!important;
+}
+
+/* Compact remaining dashboard panels */
+#dashboard > .panel,
+#dashboard > .batch-cycle-reminder{
+  margin-bottom:10px!important;
+  padding:13px!important;
+  border-radius:12px!important;
+}
+#dashboard > .panel h3,
+#dashboard > .batch-cycle-reminder h3{
+  font-size:14px!important;
+  margin-bottom:8px!important;
+}
+#dashboard .tablewrap{
+  max-width:100%!important;
+}
+#dashboard table th,
+#dashboard table td{
+  padding:7px 8px!important;
+  font-size:11px!important;
+}
+
+/* ===== Responsive breakpoints ===== */
+@media (max-width:1250px){
+  #dashboard .dash-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media (max-width:900px){
+  header{
+    align-items:flex-start!important;
+    padding:9px 12px!important;
+  }
+  header > div:first-child .mpf-report-logo{
+    width:42px!important;height:42px!important;
+  }
+  header > div:first-child h1{font-size:17px!important}
+  header > div:first-child small{font-size:10px!important}
+  header .topright{gap:5px!important}
+  #dashboard .dash-main{grid-template-columns:1fr!important}
+  #dashboard .dash-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media (max-width:650px){
+  header{
+    flex-direction:column!important;
+    gap:7px!important;
+  }
+  header > div:first-child{
+    width:100%!important;
+    grid-template-columns:auto auto minmax(0,1fr)!important;
+  }
+  header .topright{
+    width:100%!important;
+    justify-content:flex-start!important;
+  }
+  .beta-mode-badge{display:none!important}
+  #who{
+    max-width:120px!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+  main{padding:10px!important}
+  #dashboard .dash-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+  #dashboard .dash-kpi{
+    min-height:98px!important;
+    padding:10px!important;
+  }
+  #dashboard .dash-kpi .value{font-size:22px!important}
+  #dashboard .dash-hero{
+    padding:13px!important;
+  }
+  #dashboard .dash-hero h1{font-size:20px!important}
+  #dashboard .dash-actions{grid-template-columns:1fr!important}
+}
+@media (max-width:380px){
+  #dashboard .dash-grid{grid-template-columns:1fr!important}
+}
+</style>
+
+
+<style id="mpf-dashboard-ultra-compact">
+/* Smaller global dashboard typography */
+#dashboard{
+  font-size:11px!important;
+}
+#dashboard h1{font-size:18px!important}
+#dashboard h2{font-size:15px!important}
+#dashboard h3{font-size:12px!important}
+#dashboard p,
+#dashboard span,
+#dashboard small,
+#dashboard label{
+  font-size:10px!important;
+}
+
+/* Smallest practical KPI boxes */
+#dashboard .dash-grid{
+  grid-template-columns:repeat(6,minmax(105px,1fr))!important;
+  gap:6px!important;
+  margin-bottom:8px!important;
+}
+#dashboard .dash-card{
+  padding:8px!important;
+  border-radius:9px!important;
+}
+#dashboard .dash-kpi{
+  min-height:76px!important;
+}
+#dashboard .dash-kpi .dash-icon{
+  font-size:14px!important;
+  margin-bottom:3px!important;
+}
+#dashboard .dash-kpi .label{
+  font-size:9px!important;
+  line-height:1.1!important;
+}
+#dashboard .dash-kpi .value{
+  font-size:18px!important;
+  line-height:1!important;
+  margin:3px 0!important;
+}
+#dashboard .dash-kpi .sub{
+  font-size:8px!important;
+  line-height:1.1!important;
+}
+
+/* Compact top dashboard banner */
+#dashboard .dash-hero{
+  padding:10px 12px!important;
+  margin-bottom:8px!important;
+  border-radius:10px!important;
+}
+#dashboard .dash-hero h1{
+  font-size:18px!important;
+  margin:0 0 2px!important;
+}
+#dashboard .dash-hero p,
+#dashboard .dash-status{
+  font-size:9px!important;
+}
+
+/* Compact chart/list boxes */
+#dashboard .dash-main{
+  gap:7px!important;
+  margin-bottom:8px!important;
+}
+#dashboard .dash-title{
+  margin-bottom:4px!important;
+}
+#dashboard .dash-title h3{
+  font-size:11px!important;
+}
+#dashboard .dash-title span{
+  font-size:9px!important;
+}
+#dashboard .dash-bars{
+  height:125px!important;
+}
+#dashboard .dash-row{
+  padding:5px 6px!important;
+  font-size:9px!important;
+}
+#dashboard .dash-list{
+  gap:4px!important;
+}
+
+/* Small quick-action boxes */
+#dashboard .dash-actions{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:5px!important;
+}
+#dashboard .dash-action{
+  min-height:52px!important;
+  padding:6px!important;
+  border-radius:8px!important;
+}
+#dashboard .dash-action b{
+  font-size:10px!important;
+}
+#dashboard .dash-action span{
+  font-size:8px!important;
+  line-height:1.1!important;
+}
+
+/* Remaining dashboard panels/tables */
+#dashboard > .panel,
+#dashboard > .batch-cycle-reminder{
+  padding:9px!important;
+  margin-bottom:7px!important;
+  border-radius:9px!important;
+}
+#dashboard > .panel h3,
+#dashboard > .batch-cycle-reminder h3{
+  font-size:11px!important;
+  margin-bottom:5px!important;
+}
+#dashboard table th,
+#dashboard table td{
+  padding:4px 5px!important;
+  font-size:9px!important;
+  line-height:1.15!important;
+}
+#dashboard button{
+  font-size:9px!important;
+  padding:5px 7px!important;
+  min-height:28px!important;
+}
+
+/* Keep desktop dashboard dense, reflow only when needed */
+@media(max-width:1100px){
+  #dashboard .dash-grid{
+    grid-template-columns:repeat(3,minmax(105px,1fr))!important;
+  }
+}
+@media(max-width:650px){
+  #dashboard .dash-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  #dashboard .dash-actions{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  #dashboard .dash-kpi{min-height:72px!important}
+}
+@media(max-width:360px){
+  #dashboard .dash-grid{grid-template-columns:1fr 1fr!important}
+}
+</style>
+
+
+<style id="mpf-remove-business-dashboard-banner">
+#dashboard .dash-hero{display:none!important;}
+</style>
+
+
+<style id="mpf-professional-dashboard-v3">
+/* ===== Professional compact dashboard ===== */
+#dashboard{
+  --dash-bg:#f7f9f8;
+  --dash-card:#ffffff;
+  --dash-line:#e5ebe7;
+  --dash-text:#18221d;
+  --dash-muted:#6b756f;
+  --dash-accent:#0f6b3d;
+  --dash-soft:#eef6f1;
+  font-size:10px!important;
+  color:var(--dash-text)!important;
+}
+
+#dashboard .dash-wrap{
+  display:block!important;
+  width:100%!important;
+}
+
+/* KPI area */
+#dashboard .dash-grid{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(110px,1fr))!important;
+  gap:7px!important;
+  margin:0 0 9px!important;
+}
+#dashboard .dash-card{
+  background:var(--dash-card)!important;
+  border:1px solid var(--dash-line)!important;
+  border-radius:10px!important;
+  box-shadow:0 2px 7px rgba(17,48,31,.035)!important;
+  padding:8px 9px!important;
+}
+#dashboard .dash-kpi{
+  min-height:76px!important;
+  position:relative!important;
+  overflow:hidden!important;
+}
+#dashboard .dash-kpi:before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:3px;
+  background:var(--dash-accent);
+  opacity:.85;
+}
+#dashboard .dash-kpi .dash-icon{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:24px!important;
+  height:24px!important;
+  border-radius:7px!important;
+  margin:0 0 4px!important;
+  font-size:12px!important;
+  background:var(--dash-soft)!important;
+  color:var(--dash-accent)!important;
+}
+#dashboard .dash-kpi .label{
+  display:block!important;
+  color:var(--dash-muted)!important;
+  font-size:8.5px!important;
+  font-weight:700!important;
+  letter-spacing:.15px!important;
+  text-transform:uppercase!important;
+  line-height:1.1!important;
+}
+#dashboard .dash-kpi .value{
+  display:block!important;
+  margin:3px 0 2px!important;
+  font-size:18px!important;
+  font-weight:800!important;
+  line-height:1!important;
+  color:var(--dash-text)!important;
+}
+#dashboard .dash-kpi .sub{
+  color:var(--dash-muted)!important;
+  font-size:8px!important;
+  line-height:1.15!important;
+}
+
+/* Main dashboard panels */
+#dashboard .dash-main{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.65fr) minmax(260px,.75fr)!important;
+  gap:8px!important;
+  margin-bottom:8px!important;
+}
+#dashboard .dash-main > *{
+  min-width:0!important;
+}
+#dashboard .dash-title{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:8px!important;
+  margin-bottom:6px!important;
+  padding-bottom:5px!important;
+  border-bottom:1px solid #edf1ef!important;
+}
+#dashboard .dash-title h3{
+  margin:0!important;
+  font-size:11px!important;
+  font-weight:800!important;
+  letter-spacing:.1px!important;
+}
+#dashboard .dash-title span{
+  font-size:8.5px!important;
+  color:var(--dash-muted)!important;
+}
+
+/* Chart */
+#dashboard .dash-bars{
+  height:118px!important;
+  gap:5px!important;
+}
+#dashboard .dash-bar-label,
+#dashboard .dash-bar-value{
+  font-size:8px!important;
+}
+
+/* Lists */
+#dashboard .dash-list{
+  gap:4px!important;
+}
+#dashboard .dash-row{
+  border:1px solid #edf1ef!important;
+  border-radius:7px!important;
+  background:#fbfcfb!important;
+  padding:5px 6px!important;
+  font-size:8.5px!important;
+  line-height:1.2!important;
+}
+#dashboard .dash-row strong{
+  font-size:9px!important;
+}
+
+/* Quick actions */
+#dashboard .dash-actions{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:6px!important;
+  margin-bottom:8px!important;
+}
+#dashboard .dash-action{
+  min-height:50px!important;
+  padding:6px 7px!important;
+  border:1px solid var(--dash-line)!important;
+  border-radius:8px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+  text-align:left!important;
+}
+#dashboard .dash-action:hover{
+  border-color:#bfd4c7!important;
+  background:#f8fbf9!important;
+}
+#dashboard .dash-action b{
+  display:block!important;
+  font-size:9.5px!important;
+  margin-bottom:1px!important;
+}
+#dashboard .dash-action span{
+  display:block!important;
+  font-size:8px!important;
+  color:var(--dash-muted)!important;
+  line-height:1.1!important;
+}
+
+/* Remaining panels */
+#dashboard > .panel,
+#dashboard > .batch-cycle-reminder{
+  background:#fff!important;
+  border:1px solid var(--dash-line)!important;
+  border-radius:9px!important;
+  box-shadow:0 2px 7px rgba(17,48,31,.03)!important;
+  padding:8px 9px!important;
+  margin-bottom:7px!important;
+}
+#dashboard > .panel h3,
+#dashboard > .batch-cycle-reminder h3{
+  font-size:10px!important;
+  font-weight:800!important;
+  margin:0 0 5px!important;
+  padding-bottom:4px!important;
+  border-bottom:1px solid #edf1ef!important;
+}
+
+/* Tables */
+#dashboard .tablewrap{
+  border:1px solid #e9eeeb!important;
+  border-radius:7px!important;
+  overflow:auto!important;
+}
+#dashboard table{
+  width:100%!important;
+  border-collapse:collapse!important;
+}
+#dashboard table th{
+  background:#f5f8f6!important;
+  color:#5e6963!important;
+  font-size:7.8px!important;
+  font-weight:800!important;
+  text-transform:uppercase!important;
+  letter-spacing:.2px!important;
+  padding:4px 5px!important;
+}
+#dashboard table td{
+  font-size:8.4px!important;
+  padding:4px 5px!important;
+  line-height:1.15!important;
+}
+#dashboard tbody tr:hover{
+  background:#fafcfb!important;
+}
+
+/* Buttons */
+#dashboard button{
+  border-radius:6px!important;
+  font-size:8.5px!important;
+  font-weight:700!important;
+  padding:4px 6px!important;
+  min-height:26px!important;
+  box-shadow:none!important;
+}
+
+/* Clean status styles */
+#dashboard .good{
+  color:#087443!important;
+  font-weight:800!important;
+}
+#dashboard .bad{
+  color:#b42318!important;
+  font-weight:800!important;
+}
+#dashboard .muted{
+  color:var(--dash-muted)!important;
+}
+
+/* Hide any oversized decorative leftovers */
+#dashboard .dash-hero,
+#dashboard > .cards{
+  display:none!important;
+}
+
+/* Responsive layout */
+@media(max-width:1180px){
+  #dashboard .dash-grid{
+    grid-template-columns:repeat(3,minmax(110px,1fr))!important;
+  }
+}
+@media(max-width:850px){
+  #dashboard .dash-main{
+    grid-template-columns:1fr!important;
+  }
+  #dashboard .dash-actions{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+@media(max-width:560px){
+  #dashboard .dash-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  #dashboard .dash-card{
+    padding:7px!important;
+  }
+  #dashboard .dash-kpi{
+    min-height:70px!important;
+  }
+  #dashboard .dash-kpi .value{
+    font-size:16px!important;
+  }
+}
+</style>
+
+
+<style id="mpf-page-scale-75">
+/* Display the complete application at approximately 75% size on desktop */
+@media (min-width: 701px){
+  html{
+    zoom:75%;
+  }
+}
+</style>
+
+
+<style id="mpf-dashboard-extra-compact-v4">
+/* Extra reduction requested for dashboard containers */
+#dashboard .dash-wrap{
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:0!important;
+}
+
+#dashboard .dash-grid{
+  grid-template-columns:repeat(6,minmax(90px,1fr))!important;
+  gap:4px!important;
+  margin:0 0 5px!important;
+}
+#dashboard .dash-grid .dash-card,
+#dashboard .dash-grid .dash-kpi{
+  min-height:58px!important;
+  padding:5px 6px!important;
+  border-radius:7px!important;
+}
+#dashboard .dash-kpi .dash-icon{
+  width:19px!important;
+  height:19px!important;
+  font-size:10px!important;
+  margin-bottom:2px!important;
+}
+#dashboard .dash-kpi .label{
+  font-size:7px!important;
+}
+#dashboard .dash-kpi .value{
+  font-size:14px!important;
+  margin:2px 0!important;
+}
+#dashboard .dash-kpi .sub{
+  font-size:6.5px!important;
+}
+
+#dashboard .dash-main{
+  grid-template-columns:minmax(0,1.7fr) minmax(210px,.65fr)!important;
+  gap:5px!important;
+  margin-bottom:5px!important;
+}
+#dashboard .dash-main .dash-card{
+  padding:6px!important;
+  border-radius:7px!important;
+}
+#dashboard .dash-main .dash-title{
+  margin-bottom:3px!important;
+  padding-bottom:3px!important;
+}
+#dashboard .dash-main .dash-title h3{
+  font-size:9px!important;
+}
+#dashboard .dash-main .dash-title span{
+  font-size:7px!important;
+}
+#dashboard .dash-bars{
+  height:88px!important;
+}
+#dashboard .dash-row{
+  padding:3px 4px!important;
+  font-size:7px!important;
+}
+
+/* Dashboard panels */
+#dashboard .dash-panel,
+#dashboard > .panel,
+#dashboard > .batch-cycle-reminder{
+  padding:6px!important;
+  margin-bottom:5px!important;
+  border-radius:7px!important;
+}
+#dashboard .dash-panel h3,
+#dashboard > .panel h3,
+#dashboard > .batch-cycle-reminder h3{
+  font-size:9px!important;
+  margin:0 0 3px!important;
+  padding-bottom:3px!important;
+}
+
+/* Quick action area also reduced */
+#dashboard .dash-actions{
+  gap:4px!important;
+  margin-bottom:5px!important;
+}
+#dashboard .dash-action{
+  min-height:38px!important;
+  padding:4px 5px!important;
+  border-radius:6px!important;
+}
+#dashboard .dash-action b{
+  font-size:8px!important;
+}
+#dashboard .dash-action span{
+  font-size:6.5px!important;
+}
+
+/* Smaller dashboard tables */
+#dashboard table th{
+  font-size:6.5px!important;
+  padding:3px 4px!important;
+}
+#dashboard table td{
+  font-size:7px!important;
+  padding:3px 4px!important;
+}
+
+/* Reflow only when screen becomes too narrow */
+@media(max-width:1100px){
+  #dashboard .dash-grid{
+    grid-template-columns:repeat(3,minmax(90px,1fr))!important;
+  }
+}
+@media(max-width:800px){
+  #dashboard .dash-main{
+    grid-template-columns:1fr!important;
+  }
+}
+@media(max-width:520px){
+  #dashboard .dash-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+</style>
+
 </head><body><h1>Manipur Poultry Farm</h1><p class="meta">Complete Farmer Report • Generated ${reportEscape(new Date().toLocaleString('en-IN'))}</p>${html()}<p style="text-align:center;margin-top:20px">Manipur Poultry Farm</p><script>window.onload=function(){window.print()}<\/script></body></html>`);w.document.close();
 }
 function whatsappFarmerReport(id){
@@ -3092,5 +4329,676 @@ showApp();if($("lDate"))$("lDate").value=today();if($("targetWeek"))$("targetWee
 if(typeof refreshPendingOrderBreedOptions==="function")refreshPendingOrderBreedOptions();setInterval(scheduledReportCheck,30000);setInterval(()=>{if(currentUser)renderAll()},30000);
 </script>
 <script>document.addEventListener("DOMContentLoaded",()=>{try{toggleLiftingOutlet();}catch(e){}});</script>
+
+<style id="mpf-form-toggle-style">
+  .mpf-form-launcher{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:10px;
+  }
+  .mpf-form-toggle-body{display:none;margin-top:12px}
+  .mpf-form-toggle-body.show{display:block}
+  .mpf-form-cancel{margin-left:6px}
+  @media(max-width:650px){
+    .mpf-form-launcher .primary,
+    .mpf-form-toggle-actions button{width:100%}
+    .mpf-form-toggle-actions{display:grid;grid-template-columns:1fr;gap:8px}
+    .mpf-form-cancel{margin-left:0}
+  }
+</style>
+
+<script id="mpf-form-toggle-script">
+(function(){
+  const formConfigs = [
+    {heading:'Broiler Integration - Farmer Registration', add:'Add Farmer', edit:'editFarmer'},
+    {heading:'Broiler Integration - New Batch / Placement', add:'Add Batch', edit:'editBatch'},
+    {heading:'Broiler 1–6 Week Follow-up', add:'Add Follow-up', edit:'editFollow'},
+    {heading:'Commercial Sales - Chick Order', add:'Add Order', edit:'editSale'},
+    {heading:'Ready Bird / Lifting', add:'Add Lifting', edit:'editLift'},
+    {heading:'Scientific Poultry Farming Management Training Registration', add:'Add Trainee', edit:'editTraining'},
+    {heading:'Add Inventory Item', add:'Add Inventory Item', edit:'editInventoryItem'},
+    {heading:'Stock Update', add:'Update Stock'},
+    {heading:'🧾 POS - Inventory Sales', add:'New POS Sale', edit:'editPOSSale'}
+  ];
+
+  const controls = new Map();
+
+  function normalize(s){ return (s || '').replace(/\s+/g,' ').trim(); }
+
+  function findHeading(text){
+    return Array.from(document.querySelectorAll('h2,h3')).find(h => normalize(h.textContent) === text);
+  }
+
+  function openForm(key, focusFirst){
+    const cfg = controls.get(key);
+    if(!cfg) return;
+    cfg.body.classList.add('show');
+    cfg.addBtn.style.display='none';
+    cfg.cancelBtn.style.display='';
+    if(focusFirst){
+      const first = cfg.body.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+      if(first) setTimeout(()=>first.focus(), 0);
+    }
+  }
+
+  function closeForm(key){
+    const cfg = controls.get(key);
+    if(!cfg) return;
+    cfg.body.classList.remove('show');
+    cfg.addBtn.style.display='';
+    cfg.cancelBtn.style.display='none';
+  }
+
+  function enhance(config){
+    const heading = findHeading(config.heading);
+    if(!heading) return;
+
+    const panel = heading.closest('.panel');
+    if(!panel || panel.dataset.mpfToggleReady === '1') return;
+    panel.dataset.mpfToggleReady = '1';
+
+    const nodes = [];
+    let n = heading.nextSibling;
+    while(n){
+      const next = n.nextSibling;
+      nodes.push(n);
+      n = next;
+    }
+
+    const launcher = document.createElement('div');
+    launcher.className = 'mpf-form-launcher';
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'primary';
+    addBtn.textContent = config.add;
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'secondary mpf-form-cancel';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.display = 'none';
+
+    const body = document.createElement('div');
+    body.className = 'mpf-form-toggle-body';
+
+    nodes.forEach(node => body.appendChild(node));
+
+    launcher.appendChild(addBtn);
+    launcher.appendChild(cancelBtn);
+    panel.appendChild(launcher);
+    panel.appendChild(body);
+
+    addBtn.addEventListener('click', () => openForm(config.heading, true));
+    cancelBtn.addEventListener('click', () => closeForm(config.heading));
+
+    controls.set(config.heading, {panel, body, addBtn, cancelBtn});
+  }
+
+  function wrapEditFunction(config){
+    if(!config.edit || typeof window[config.edit] !== 'function') return;
+    const original = window[config.edit];
+    if(original.__mpfToggleWrapped) return;
+
+    function wrapped(){
+      openForm(config.heading, false);
+      return original.apply(this, arguments);
+    }
+    wrapped.__mpfToggleWrapped = true;
+    window[config.edit] = wrapped;
+  }
+
+  function init(){
+    formConfigs.forEach(enhance);
+    formConfigs.forEach(wrapEditFunction);
+
+    // Existing links/buttons that intentionally navigate to an entry form should open it.
+    if(typeof window.goToEntry === 'function' && !window.goToEntry.__mpfToggleWrapped){
+      const originalGoToEntry = window.goToEntry;
+      window.goToEntry = function(tabId, fieldId){
+        const result = originalGoToEntry.apply(this, arguments);
+        const map = {
+          farmers:'Broiler Integration - Farmer Registration',
+          batches:'Broiler Integration - New Batch / Placement',
+          followups:'Broiler 1–6 Week Follow-up',
+          sales:'Commercial Sales - Chick Order',
+          lifting:'Ready Bird / Lifting',
+          training:'Scientific Poultry Farming Management Training Registration',
+          inventory:'Add Inventory Item',
+          inventoryPOS:'🧾 POS - Inventory Sales'
+        };
+        if(map[tabId]) openForm(map[tabId], false);
+        return result;
+      };
+      window.goToEntry.__mpfToggleWrapped = true;
+    }
+
+    window.mpfOpenEntryForm = openForm;
+    window.mpfCloseEntryForm = closeForm;
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+
+<style id="mpf-recent-orders-collapse-style">
+#recentCommercialOrdersPanel .recent-orders-heading{
+ display:flex!important;align-items:center!important;justify-content:space-between!important;
+ gap:8px!important;border-bottom:1px solid #edf1ef!important;margin-bottom:4px!important;
+}
+#recentCommercialOrdersPanel .recent-orders-heading h3{
+ border:0!important;margin:0!important;padding:0 0 4px!important;
+}
+#recentCommercialOrdersPanel .recent-orders-toggle{
+ width:24px!important;height:22px!important;min-height:22px!important;padding:0!important;
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ border:1px solid #dce5df!important;background:#f7faf8!important;color:#26362d!important;
+ border-radius:5px!important;font-size:13px!important;font-weight:800!important;line-height:1!important;
+ cursor:pointer!important;
+}
+#recentCommercialOrdersPanel .recent-orders-toggle:hover{background:#eef5f1!important}
+#recentCommercialOrdersPanel.collapsed .recent-orders-heading{margin-bottom:0!important;border-bottom:0!important}
+#recentCommercialOrdersPanel.collapsed{padding-bottom:5px!important}
+</style>
+<script id="mpf-recent-orders-collapse-script">
+function toggleRecentCommercialOrders(){
+ const body=document.getElementById('recentCommercialOrdersBody');
+ const btn=document.getElementById('recentOrdersToggle');
+ const panel=document.getElementById('recentCommercialOrdersPanel');
+ if(!body||!btn)return;
+ const closing=body.style.display!=='none';
+ body.style.display=closing?'none':'';
+ btn.textContent=closing?'⌄':'⌃';
+ btn.setAttribute('aria-expanded',closing?'false':'true');
+ btn.title=closing?'Expand Recent Commercial Orders':'Collapse Recent Commercial Orders';
+ if(panel)panel.classList.toggle('collapsed',closing);
+}
+</script>
+
+
+<style id="mpf-inventory-total-feed-style">
+#inventory .inventory-feed-summary{align-items:stretch!important}
+#inventory .inventory-total-feed-card{padding:8px 10px!important}
+#inventory .inventory-feed-qty-grid{
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ gap:6px!important;margin-top:5px!important;
+}
+#inventory .inventory-feed-qty-grid>div{
+ padding:5px 7px!important;border:1px solid #e5ebe7!important;border-radius:6px!important;
+ background:#fafcfb!important;text-align:center!important;
+}
+#inventory .inventory-feed-qty-grid small{display:block!important;font-size:8px!important;margin-bottom:2px!important}
+#inventory .inventory-feed-qty-grid b{display:inline!important;font-size:15px!important;margin-right:3px!important}
+#inventory .inventory-feed-qty-grid span{font-size:7px!important;color:#69756e!important}
+@media(max-width:650px){
+ #inventory .inventory-total-feed-card{grid-column:1/-1!important}
+ #inventory .inventory-feed-qty-grid{grid-template-columns:repeat(3,1fr)!important}
+}
+
+#inventory .inventory-equipment-qty-grid{
+ display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+ gap:6px!important;margin-top:5px!important;
+}
+#inventory .inventory-equipment-qty-grid>div{
+ padding:5px 7px!important;border:1px solid #e5ebe7!important;border-radius:6px!important;
+ background:#fafcfb!important;text-align:center!important;
+}
+#inventory .inventory-equipment-qty-grid small{display:block!important;font-size:8px!important;margin-bottom:2px!important}
+#inventory .inventory-equipment-qty-grid b{display:inline!important;font-size:15px!important;margin-right:3px!important}
+#inventory .inventory-equipment-qty-grid span{font-size:7px!important;color:#69756e!important}
+@media(max-width:900px){
+ #inventory .inventory-equipment-qty-grid{grid-template-columns:repeat(3,1fr)!important}
+}
+@media(max-width:650px){
+ #inventory .inventory-total-equipment-card{grid-column:1/-1!important}
+ #inventory .inventory-equipment-qty-grid{grid-template-columns:repeat(2,1fr)!important}
+}
+
+</style>
+<script id="mpf-inventory-total-feed-script">
+(function(){
+  function n(v){
+    const x=Number(v);
+    return Number.isFinite(x)?x:0;
+  }
+
+  function updateInventoryFeedDashboard(){
+    /* Use the website's EXISTING inventory stock data directly. */
+    const items=(typeof db!=='undefined' && Array.isArray(db.inventory)) ? db.inventory : [];
+    let preStarter=0, starter=0, finisher=0;
+
+    items.forEach(item=>{
+      if(String(item.category||'')!=='Feeds') return;
+
+      const name=String(item.name||'').trim().toLowerCase();
+      const stock=n(item.stock);
+
+      if(
+        name.includes('pre-starter') ||
+        name.includes('pre starter') ||
+        name.includes('prestarter')
+      ){
+        preStarter += stock;
+      }else if(name.includes('finisher')){
+        finisher += stock;
+      }else if(name.includes('starter')){
+        starter += stock;
+      }
+    });
+
+    const pre=document.getElementById('invPreStarterQty');
+    const sta=document.getElementById('invStarterQty');
+    const fin=document.getElementById('invFinisherQty');
+
+    if(pre) pre.textContent=preStarter;
+    if(sta) sta.textContent=starter;
+    if(fin) fin.textContent=finisher;
+
+    let drinker3=0, drinker8=0, autoDrinker=0, feeder8kg=0, turboFeeder=0, thermometer=0;
+
+    items.forEach(item=>{
+      if(String(item.category||'')!=='Equipment') return;
+
+      const name=String(item.name||'').trim().toLowerCase()
+        .replace(/litres?/g,'litre')
+        .replace(/\s+/g,' ');
+      const stock=n(item.stock);
+
+      if(
+        name.includes('3 litre drinker') ||
+        name.includes('3l drinker') ||
+        name.includes('3 l drinker')
+      ){
+        drinker3 += stock;
+      }else if(
+        name.includes('8 litre drinker') ||
+        name.includes('8l drinker') ||
+        name.includes('8 l drinker')
+      ){
+        drinker8 += stock;
+      }else if(name.includes('auto drinker')){
+        autoDrinker += stock;
+      }else if(
+        name.includes('8kg feeder') ||
+        name.includes('8 kg feeder')
+      ){
+        feeder8kg += stock;
+      }else if(name.includes('turbo feeder')){
+        turboFeeder += stock;
+      }else if(name.includes('thermometer')){
+        thermometer += stock;
+      }
+    });
+
+    const eq3=document.getElementById('inv3LDrinkerQty');
+    const eq8=document.getElementById('inv8LDrinkerQty');
+    const eqAuto=document.getElementById('invAutoDrinkerQty');
+    const eq8kg=document.getElementById('inv8KgFeederQty');
+    const eqTurbo=document.getElementById('invTurboFeederQty');
+    const eqThermometer=document.getElementById('invThermometerQty');
+
+    if(eq3) eq3.textContent=drinker3;
+    if(eq8) eq8.textContent=drinker8;
+    if(eqAuto) eqAuto.textContent=autoDrinker;
+    if(eq8kg) eq8kg.textContent=feeder8kg;
+    if(eqTurbo) eqTurbo.textContent=turboFeeder;
+    if(eqThermometer) eqThermometer.textContent=thermometer;
+  }
+
+  window.updateInventoryFeedDashboard=updateInventoryFeedDashboard;
+
+  /* Update immediately from old/saved inventory data. */
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',()=>{
+      setTimeout(updateInventoryFeedDashboard,0);
+    });
+  }else{
+    setTimeout(updateInventoryFeedDashboard,0);
+  }
+
+  /* Keep totals synced whenever Inventory is rendered. */
+  if(typeof renderInventory==='function'){
+    const originalRenderInventory=renderInventory;
+    renderInventory=function(){
+      const result=originalRenderInventory.apply(this,arguments);
+      updateInventoryFeedDashboard();
+      return result;
+    };
+  }
+
+  /* Keep totals synced after stock in / stock out / set stock. */
+  if(typeof updateInventoryStock==='function'){
+    const originalUpdateInventoryStock=updateInventoryStock;
+    updateInventoryStock=function(){
+      const result=originalUpdateInventoryStock.apply(this,arguments);
+      setTimeout(updateInventoryFeedDashboard,0);
+      return result;
+    };
+  }
+
+  /* Keep totals synced after adding/editing inventory items. */
+  if(typeof saveInventoryItem==='function'){
+    const originalSaveInventoryItem=saveInventoryItem;
+    saveInventoryItem=function(){
+      const result=originalSaveInventoryItem.apply(this,arguments);
+      setTimeout(updateInventoryFeedDashboard,0);
+      return result;
+    };
+  }
+})();
+</script>
+
+
+<script id="mpf-commercial-edit-definitive-fix">
+(function(){
+  const FORM_HEADING='Commercial Sales - Chick Order';
+
+  function byId(id){return document.getElementById(id);}
+  function setValue(id,value){
+    const node=byId(id);
+    if(node)node.value=value==null?'':String(value);
+  }
+
+  function selectedOrder(id,rowIndex){
+    const sales=(typeof db!=='undefined'&&Array.isArray(db.sales))?db.sales:[];
+    if(
+      Number.isInteger(rowIndex)&&sales[rowIndex]&&
+      String(sales[rowIndex].id)===String(id)
+    ){
+      return {order:sales[rowIndex],index:rowIndex};
+    }
+    const index=sales.findIndex(x=>String(x?.id)===String(id));
+    return index>=0?{order:sales[index],index}:null;
+  }
+
+  function openCommercialForm(){
+    const sales=byId('sales');
+    if(!sales)return null;
+
+    const navBtn=[...document.querySelectorAll('#nav button')]
+      .find(b=>(b.getAttribute('onclick')||'').includes("tab('sales'"));
+
+    try{
+      if(typeof tab==='function')tab('sales',navBtn||null);
+    }catch(e){
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      sales.classList.add('active');
+    }
+
+    try{
+      if(typeof window.mpfOpenEntryForm==='function'){
+        window.mpfOpenEntryForm(FORM_HEADING,false);
+      }
+    }catch(e){}
+
+    const panel=[...sales.querySelectorAll('.panel')].find(p=>{
+      const h=p.querySelector('h2,h3');
+      return h&&h.textContent.replace(/\s+/g,' ').trim()===FORM_HEADING;
+    })||sales.querySelector('.panel');
+
+    if(panel){
+      const body=panel.querySelector('.mpf-form-toggle-body');
+      const launcher=panel.querySelector('.mpf-form-launcher');
+      if(body)body.classList.add('show');
+      if(launcher){
+        const add=launcher.querySelector('.primary');
+        const cancel=launcher.querySelector('.mpf-form-cancel');
+        if(add)add.style.display='none';
+        if(cancel)cancel.style.display='';
+      }
+    }
+    return panel;
+  }
+
+  function restore(order,index,scroll){
+    if(!order)return;
+    edit.sale=order.id;
+    edit.saleIndex=index;
+
+    setValue('sName',order.name);
+    setValue('sPhone',order.phone);
+    setValue('sAddress',order.address);
+
+    const product=byId('sProduct');
+    if(product){
+      const wanted=String(order.product||'Broiler');
+      const exists=[...product.options].some(opt=>opt.value===wanted);
+      product.value=exists?wanted:'Other';
+    }
+
+    setValue('sOtherBreed',order.otherBreed);
+    try{if(typeof toggleOtherBreed==='function')toggleOtherBreed();}catch(e){}
+
+    setValue('sQty',order.qty);
+    setValue('sRate',order.rate);
+    setValue('sAdvance',order.advance??0);
+    setValue('sDeliveryDate',order.deliveryDate);
+    setValue('sStaff',order.staff);
+    setValue('sDescription',order.description);
+    setValue('sStatus',order.status||'Pending');
+
+    try{if(typeof handleCommercialStatusChange==='function')handleCommercialStatusChange();}catch(e){}
+    try{if(typeof calcSale==='function')calcSale();}catch(e){}
+
+    /* Re-apply all saved values after UI handlers. */
+    setValue('sName',order.name);
+    setValue('sPhone',order.phone);
+    setValue('sAddress',order.address);
+    setValue('sQty',order.qty);
+    setValue('sRate',order.rate);
+    setValue('sAdvance',order.advance??0);
+    setValue('sDeliveryDate',order.deliveryDate);
+    setValue('sStaff',order.staff);
+    setValue('sDescription',order.description);
+    setValue('sStatus',order.status||'Pending');
+
+    const saveBtn=byId('salesSave');
+    if(saveBtn)saveBtn.textContent='Update Order';
+
+    if(scroll){
+      const panel=byId('sName')?.closest('.panel')||byId('sales');
+      if(panel)panel.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  }
+
+  window.mpfCommercialEditOrder=function(id,rowIndex){
+    const found=selectedOrder(id,rowIndex);
+    if(!found){
+      alert('Commercial Order not found.');
+      return false;
+    }
+    openCommercialForm();
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      restore(found.order,found.index,true);
+      setTimeout(()=>{
+        if(
+          Number.isInteger(edit.saleIndex)&&
+          db.sales[edit.saleIndex]===found.order
+        ){
+          restore(found.order,found.index,false);
+        }
+      },120);
+    }));
+    return true;
+  };
+
+  window.editSale=function(id,rowIndex){
+    return window.mpfCommercialEditOrder(id,rowIndex);
+  };
+  window.editSale.__mpfToggleWrapped=true;
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    const addButton=[...document.querySelectorAll('.mpf-form-launcher .primary')]
+      .find(b=>b.textContent.trim()==='Add Order');
+    if(addButton&&!addButton.dataset.mpfCommercialReset){
+      addButton.dataset.mpfCommercialReset='1';
+      addButton.addEventListener('click',()=>{
+        edit.sale=null;
+        edit.saleIndex=null;
+        const saveBtn=byId('salesSave');
+        if(saveBtn)saveBtn.textContent='Save Order';
+      });
+    }
+  });
+})();
+</script>
+
+
+<script id="mpf-new-form-reset-fix">
+(function(){
+  function byId(id){return document.getElementById(id);}
+  function val(id,v){
+    const x=byId(id);
+    if(x)x.value=v==null?'':String(v);
+  }
+  function text(id,v){
+    const x=byId(id);
+    if(x)x.textContent=v;
+  }
+
+  function resetFarmer(){
+    edit.farmer=null;
+    text('farmerSave','Save Farmer');
+    if(typeof resetForm==='function'){
+      resetForm('',[
+        'fName','fPhone','fAddress','fFarmLocation','fSheds','fCapacity',
+        'fStaff','fPrevCapacity','fPartner','fPrevFeed','fPrevChicks','fRemarks'
+      ]);
+    }
+    val('fDistrict','Imphal East');
+    val('fStatus','Active');
+    val('fLiftingType','Lifting');
+    val('fReared','No');
+    val('fFarmingType','Contract');
+    try{if(typeof toggleFarmerHistory==='function')toggleFarmerHistory();}catch(e){}
+  }
+
+  function resetBatch(){
+    edit.batch=null;
+    text('batchSave','Save Batch');
+    val('bFarmerSearch','');
+    const f=byId('bFarmer'); if(f){f.value='';f.innerHTML='';}
+    val('bDate',typeof today==='function'?today():'');
+    val('bQty','');
+    val('bBreed','Broiler');
+    val('bRate','');
+    val('bPreStarter','0');
+    val('bStarter','0');
+    val('bFinisher','0');
+    val('bHealth','Normal');
+    val('bStaff','');
+    val('bRemarks','');
+    if(byId('bLift')){
+      try{val('bLift',typeof formatDatePlus==='function'?formatDatePlus(byId('bDate').value,42):'');}catch(e){val('bLift','');}
+    }
+  }
+
+  function resetFollow(){
+    if(typeof clearFollowup==='function'){
+      clearFollowup();
+    }else{
+      edit.follow=null;
+      text('followSave','Save Follow-up');
+    }
+  }
+
+  function resetCommercial(){
+    edit.sale=null;
+    edit.saleIndex=null;
+    text('salesSave','Save Order');
+    if(typeof resetForm==='function'){
+      resetForm('',[
+        'sName','sPhone','sAddress','sQty','sRate','sAdvance',
+        'sStaff','sOtherBreed','sDescription'
+      ]);
+    }
+    val('sProduct','Broiler');
+    val('sStatus','Pending');
+    val('sAdvance','0');
+    try{if(typeof toggleOtherBreed==='function')toggleOtherBreed();}catch(e){}
+    try{if(typeof handleCommercialStatusChange==='function')handleCommercialStatusChange();}catch(e){}
+    try{if(typeof autoScheduleChickDelivery==='function')autoScheduleChickDelivery();}catch(e){}
+    try{if(typeof calcSale==='function')calcSale();}catch(e){}
+  }
+
+  function resetLifting(){
+    edit.lift=null;
+    text('liftSave','Save Lifting');
+    val('lBatchSearch','');
+    const b=byId('lBatch'); if(b)b.value='';
+    val('lFarmerSearch','');
+    const f=byId('lFarmer'); if(f){f.value='';f.innerHTML='';}
+    val('lDate',typeof today==='function'?today():'');
+    val('lConfirmDate','');
+    val('lAge','');
+    val('lAvailable','');
+    val('lQty','');
+    val('lWeight','');
+    val('lRate','');
+    val('lAgent','');
+    val('lOutletType','Our Outlet');
+    val('lOtherOutlet','');
+    val('lVehicle','');
+    val('lStatus','Scheduled');
+    try{if(typeof toggleLiftingOutlet==='function')toggleLiftingOutlet();}catch(e){}
+    try{if(typeof toggleLiftingConfirmDate==='function')toggleLiftingConfirmDate();}catch(e){}
+  }
+
+  function resetTraining(){
+    edit.training=null;
+    text('trainingSave','Save Training');
+    [
+      'tName','tAadhaar','tPhone','tAddress','tBatch','tDay','tFarmSize',
+      'tCapacity','tLocation','tPrevBreed','tPrevQty','tFee','tCertNo','tRemarks'
+    ].forEach(id=>val(id,''));
+    val('tDate',typeof today==='function'?today():'');
+    val('tShed','No');
+    val('tPrevious','No');
+    val('tPayment','Cash');
+    val('tCertificate','No');
+    try{if(typeof toggleTrainingFarm==='function')toggleTrainingFarm();}catch(e){}
+    try{if(typeof toggleTrainingExperience==='function')toggleTrainingExperience();}catch(e){}
+  }
+
+  function resetByHeading(heading){
+    if(heading==='Broiler Integration - Farmer Registration')resetFarmer();
+    else if(heading==='Broiler Integration - New Batch / Placement')resetBatch();
+    else if(heading==='Broiler 1–6 Week Follow-up')resetFollow();
+    else if(heading==='Commercial Sales - Chick Order')resetCommercial();
+    else if(heading==='Ready Bird / Lifting')resetLifting();
+    else if(heading==='Scientific Poultry Farming Management Training Registration')resetTraining();
+    else if(heading==='Add Inventory Item' && typeof resetInventoryForm==='function')resetInventoryForm();
+    else if(heading==='🧾 POS - Inventory Sales' && typeof clearPOS==='function')clearPOS();
+  }
+
+  function bind(){
+    document.querySelectorAll('.mpf-form-launcher').forEach(launcher=>{
+      if(launcher.dataset.mpfResetBound==='1')return;
+      const panel=launcher.closest('.panel');
+      const heading=panel?.querySelector('h2,h3')?.textContent.replace(/\s+/g,' ').trim();
+      if(!heading)return;
+
+      const add=launcher.querySelector('.primary');
+      const cancel=launcher.querySelector('.mpf-form-cancel');
+
+      if(add)add.addEventListener('click',()=>resetByHeading(heading));
+      if(cancel)cancel.addEventListener('click',()=>resetByHeading(heading));
+      launcher.dataset.mpfResetBound='1';
+    });
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);
+  else bind();
+})();
+</script>
+
 </body>
 </html>
