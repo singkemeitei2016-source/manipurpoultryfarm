@@ -403,7 +403,7 @@ a{color:#8a6b00}
 </div>
 <button onclick="tab('salesRecords',this)"><span class="nav-icon">📊</span>Sales Records</button>
 <div class="nav-group"><button class="nav-group-title" type="button" onclick="this.parentElement.classList.toggle('open')">🎓 Training Registration <span>⌄</span></button><div class="nav-group-items"><button onclick="tab('training',this)">Training</button><button onclick="tab('certificates',this)">Completed Certificates</button></div></div>
-<button onclick="tab('reports',this)"><span class="nav-icon">📊</span>Reports</button><button onclick="tab('settings',this)"><span class="nav-icon">⚙️</span>Settings</button>
+<button onclick="tab('reports',this)"><span class="nav-icon">📊</span>Reports</button><button onclick="tab('adminMpfConnect',this)"><span class="nav-icon">🛡️</span>Admin MPF Connect</button> <button onclick="tab('settings',this)"><span class="nav-icon">⚙️</span>Settings</button>
 </nav>
 
 <main>
@@ -1068,6 +1068,90 @@ a{color:#8a6b00}
 <button class="secondary" onclick="sendMonthlyReport('sales')">Send Sales</button>
 <button class="secondary" onclick="sendMonthlyReport('training')">Send Training</button>
 </div></div>
+</section>
+
+
+<section id="adminMpfConnect" class="tab">
+  <div class="panel">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <h2 style="margin-bottom:4px">🛡️ Admin MPF Connect</h2>
+        <p class="muted" style="margin-top:0">Manage Farmer Connect directly from the main MPF app. No separate login is required.</p>
+      </div>
+      <div class="actions">
+        <button class="secondary" onclick="tab('farmers')">Manage Farmers</button>
+        <button class="secondary" onclick="tab('batches')">Manage Batches</button>
+        <button class="secondary" onclick="tab('lifting')">Manage Lifting</button>
+      </div>
+    </div>
+
+    <div class="cards" style="margin-top:12px">
+      <div class="card"><div class="dash-label">👨‍🌾 Total Farmers</div><b id="ampfTotalFarmers">0</b></div>
+      <div class="card"><div class="dash-label">🐥 Active Batches</div><b id="ampfActiveBatches">0</b></div>
+      <div class="card"><div class="dash-label">🛒 Pending Farmer Orders</div><b id="ampfPendingOrders">0</b></div>
+      <div class="card"><div class="dash-label">✅ Checklist Today</div><b id="ampfChecklistToday">0%</b></div>
+      <div class="card"><div class="dash-label">💬 Open Support</div><b id="ampfOpenSupport">0</b></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>👨‍🌾 Farmer Access & Status</h3>
+    <p class="muted">Farmer Connect login uses the Farmer ID from your main farmer registration. Inactive farmers cannot access Farmer Connect.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>ID</th><th>Farmer</th><th>Phone</th><th>Location</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="ampfFarmerRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>🛒 Farmer Connect Orders</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Order</th><th>Date</th><th>Farmer</th><th>Category</th><th>Item</th><th>Qty</th><th>Required</th><th>Note</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="ampfOrderRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>✅ Daily Checklist</h3>
+    <div class="grid" style="grid-template-columns:minmax(180px,240px) 1fr">
+      <label>Date<input id="ampfChecklistDate" type="date" onchange="renderAdminMpfConnect()"></label>
+      <label>Farmer Search<input id="ampfChecklistSearch" placeholder="Search farmer..." oninput="renderAdminMpfConnect()"></label>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Date</th><th>Farmer</th><th>ID</th><th>Completed</th><th>Status</th><th>Daily Note</th><th>Saved</th></tr></thead>
+        <tbody id="ampfChecklistRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>🔔 Farmer Connect Notification</h3>
+    <div class="grid" style="grid-template-columns:1fr auto">
+      <label>Notification Message<textarea id="ampfNoticeText" placeholder="Write the message shown in Farmer Connect..."></textarea></label>
+      <div class="actions" style="align-self:end"><button class="primary" onclick="publishAdminMpfNotice()">Publish Notice</button></div>
+    </div>
+    <div class="tablewrap" style="margin-top:10px">
+      <table>
+        <thead><tr><th>Published</th><th>Message</th><th>Action</th></tr></thead>
+        <tbody id="ampfNoticeRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>💬 Farmer Support Requests</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Date</th><th>Farmer</th><th>Subject</th><th>Message</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="ampfSupportRows"></tbody>
+      </table>
+    </div>
+  </div>
 </section>
 
 <section id="settings" class="tab">
@@ -5012,19 +5096,6 @@ function toggleRecentCommercialOrders(){
   else bind();
 })();
 </script>
-
-
-
-
-
-
-<button id="openAdminMpfConnectBtn" type="button" class="primary"
- onclick="window.open('index1.html','_blank')"
- style="position:fixed;right:18px;bottom:18px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.18)">
- 🛡️ Admin MPF Connect
-</button>
-
-
 <script id="mpf-all-data-portal-bridge">
 (function(){
   const STATE_KEY='mpf_main_shared_state_v2';
@@ -5093,7 +5164,11 @@ function toggleRecentCommercialOrders(){
       farmerSupport:(db.farmerSupport||[]).map(x=>({...x})),
       farmerNotices:(db.farmerNotices||[]).map(x=>({...x}))
     };
-    try{localStorage.setItem(STATE_KEY,JSON.stringify(payload))}catch(e){}
+    try{
+      localStorage.setItem(STATE_KEY,JSON.stringify(payload));
+      localStorage.setItem('mpfFarmers',JSON.stringify(payload.farmers||[]));
+      localStorage.setItem('mpf_farmer_connect_state_v1',JSON.stringify(payload));
+    }catch(e){}
   }
   window.publishMpfSharedState=publish;
 
@@ -5157,6 +5232,287 @@ function toggleRecentCommercialOrders(){
   },2500);
 
   document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{try{publish()}catch(e){}},800));
+})();
+</script>
+
+
+<script id="mpf-admin-connect-merged-script">
+(function(){
+  function esc(v){
+    return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function fmt(v){
+    if(!v)return '-';
+    const d=new Date(v);
+    return isNaN(d)?String(v):d.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  }
+  function badge(status){
+    const s=String(status||'Pending');
+    const c=/active|complete|delivered|resolved|confirmed/i.test(s)?'good':/inactive|cancel/i.test(s)?'bad':'warn';
+    return '<span class="'+c+'">'+esc(s)+'</span>';
+  }
+  function ensure(){
+    if(typeof db==='undefined')return false;
+    ['farmerOrders','farmerChecklists','farmerSupport','farmerNotices'].forEach(k=>{
+      if(!Array.isArray(db[k]))db[k]=[];
+    });
+    return true;
+  }
+  function setText(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+
+  window.renderAdminMpfConnect=function(){
+    if(!ensure())return;
+    const today=new Date().toISOString().slice(0,10);
+    const dateInput=document.getElementById('ampfChecklistDate');
+    if(dateInput&&!dateInput.value)dateInput.value=today;
+
+    const activeBatches=(db.batches||[]).filter(b=>!['Completed','Closed','Cancelled'].includes(String(b.status||'Active')));
+    const pending=(db.farmerOrders||[]).filter(o=>['Pending','Confirmed'].includes(String(o.status||'Pending')));
+    const todayChecks=(db.farmerChecklists||[]).filter(x=>x.date===today);
+    const totalDone=todayChecks.reduce((s,x)=>s+(x.checks||[]).filter(Boolean).length,0);
+    const totalPossible=todayChecks.length*8;
+
+    setText('ampfTotalFarmers',(db.farmers||[]).length);
+    setText('ampfActiveBatches',activeBatches.length);
+    setText('ampfPendingOrders',pending.length);
+    setText('ampfChecklistToday',(totalPossible?Math.round(totalDone/totalPossible*100):0)+'%');
+    setText('ampfOpenSupport',(db.farmerSupport||[]).filter(x=>String(x.status||'Open')!=='Resolved').length);
+
+    const fr=document.getElementById('ampfFarmerRows');
+    if(fr){
+      const list=(db.farmers||[]).slice().sort((a,b)=>Number(b.createdAt||0)-Number(a.createdAt||0));
+      fr.innerHTML=list.length?list.map(f=>`
+        <tr>
+          <td><b>${esc(f.id)}</b></td><td>${esc(f.name||'-')}</td><td>${esc(f.phone||'-')}</td>
+          <td>${esc(f.farmLocation||f.address||'-')}</td><td>${badge(f.status||'Active')}</td>
+          <td class="actions">
+            <button class="secondary" onclick="editFarmer('${esc(f.id)}')">Edit</button>
+            <button class="${String(f.status||'Active')==='Active'?'danger':'primary'}" onclick="toggleAdminMpfFarmer('${esc(f.id)}')">${String(f.status||'Active')==='Active'?'Deactivate':'Activate'}</button>
+          </td>
+        </tr>`).join(''):'<tr><td colspan="6" class="muted">No farmers registered.</td></tr>';
+    }
+
+    const or=document.getElementById('ampfOrderRows');
+    if(or){
+      const list=(db.farmerOrders||[]).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+      or.innerHTML=list.length?list.map(o=>`
+        <tr>
+          <td>${esc(o.id)}</td><td>${esc(o.date||'-')}</td>
+          <td><b>${esc(o.farmerName||'-')}</b><br><small>${esc(o.farmerId||'')}</small></td>
+          <td>${esc(o.category||'-')}</td><td>${esc(o.item||'-')}</td><td>${esc(o.qty||0)} ${esc(o.unit||'')}</td>
+          <td>${esc(o.requiredDate||'-')}</td><td>${esc(o.note||'-')}</td><td>${badge(o.status||'Pending')}</td>
+          <td class="actions">
+            <button class="secondary" onclick="setAdminMpfOrderStatus('${esc(o.id)}','Confirmed')">Confirm</button>
+            <button class="primary" onclick="setAdminMpfOrderStatus('${esc(o.id)}','Delivered')">Delivered</button>
+            <button class="danger" onclick="setAdminMpfOrderStatus('${esc(o.id)}','Cancelled')">Cancel</button>
+            <button class="danger" onclick="deleteAdminMpfOrder('${esc(o.id)}')">Delete</button>
+          </td>
+        </tr>`).join(''):'<tr><td colspan="10" class="muted">No Farmer Connect orders.</td></tr>';
+    }
+
+    const cr=document.getElementById('ampfChecklistRows');
+    if(cr){
+      const wantedDate=document.getElementById('ampfChecklistDate')?.value||today;
+      const q=(document.getElementById('ampfChecklistSearch')?.value||'').trim().toLowerCase();
+      const list=(db.farmerChecklists||[]).filter(x=>
+        (!wantedDate||x.date===wantedDate) &&
+        (!q||(String(x.farmerName||'')+' '+String(x.farmerId||'')).toLowerCase().includes(q))
+      ).sort((a,b)=>String(b.savedAt||'').localeCompare(String(a.savedAt||'')));
+      cr.innerHTML=list.length?list.map(x=>{
+        const done=(x.checks||[]).filter(Boolean).length,total=(x.checks||[]).length||8;
+        const status=done===total?'Completed':done?'In Progress':'Not Started';
+        return `<tr><td>${esc(x.date||'-')}</td><td>${esc(x.farmerName||farmerName(x.farmerId))}</td><td>${esc(x.farmerId||'-')}</td>
+          <td>${done} / ${total}</td><td>${badge(status)}</td><td>${esc(x.note||'-')}</td><td>${esc(fmt(x.savedAt))}</td></tr>`;
+      }).join(''):'<tr><td colspan="7" class="muted">No checklist records for this date.</td></tr>';
+    }
+
+    const nr=document.getElementById('ampfNoticeRows');
+    if(nr){
+      const list=(db.farmerNotices||[]).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+      nr.innerHTML=list.length?list.map(x=>`
+        <tr><td>${esc(fmt(x.createdAt))}</td><td>${esc(x.message||'')}</td>
+        <td><button class="danger" onclick="deleteAdminMpfNotice('${esc(x.id)}')">Delete</button></td></tr>`).join(''):
+        '<tr><td colspan="3" class="muted">No notifications published.</td></tr>';
+    }
+
+    const sr=document.getElementById('ampfSupportRows');
+    if(sr){
+      const list=(db.farmerSupport||[]).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+      sr.innerHTML=list.length?list.map(x=>`
+        <tr><td>${esc(fmt(x.createdAt))}</td><td><b>${esc(x.farmerName||'-')}</b><br><small>${esc(x.farmerId||'')}</small></td>
+        <td>${esc(x.subject||'-')}</td><td>${esc(x.message||'-')}</td><td>${badge(x.status||'Open')}</td>
+        <td class="actions">
+          <button class="primary" onclick="resolveAdminMpfSupport('${esc(x.id)}')">Resolved</button>
+          <button class="danger" onclick="deleteAdminMpfSupport('${esc(x.id)}')">Delete</button>
+        </td></tr>`).join(''):'<tr><td colspan="6" class="muted">No support requests.</td></tr>';
+    }
+  };
+
+  window.toggleAdminMpfFarmer=function(id){
+    if(!ensure())return;
+    const f=(db.farmers||[]).find(x=>String(x.id)===String(id));if(!f)return;
+    f.status=String(f.status||'Active')==='Active'?'Inactive':'Active';
+    save();
+  };
+
+  window.setAdminMpfOrderStatus=function(id,status){
+    if(!ensure())return;
+    const o=db.farmerOrders.find(x=>String(x.id)===String(id));if(!o)return;
+    o.status=status;o.updatedAt=new Date().toISOString();save();
+  };
+  window.deleteAdminMpfOrder=function(id){
+    if(!ensure()||!confirm('Delete this Farmer Connect order?'))return;
+    db.farmerOrders=db.farmerOrders.filter(x=>String(x.id)!==String(id));save();
+  };
+
+  window.publishAdminMpfNotice=function(){
+    if(!ensure())return;
+    const input=document.getElementById('ampfNoticeText');
+    const message=input?.value.trim();if(!message)return alert('Enter notification message.');
+    db.farmerNotices.unshift({id:'NOTICE-'+Date.now(),message,createdAt:new Date().toISOString()});
+    input.value='';save();
+    alert('Notification published to Farmer Connect.');
+  };
+  window.deleteAdminMpfNotice=function(id){
+    if(!ensure()||!confirm('Delete this notification?'))return;
+    db.farmerNotices=db.farmerNotices.filter(x=>String(x.id)!==String(id));save();
+  };
+
+  window.resolveAdminMpfSupport=function(id){
+    if(!ensure())return;
+    const x=db.farmerSupport.find(x=>String(x.id)===String(id));if(!x)return;
+    x.status='Resolved';x.resolvedAt=new Date().toISOString();save();
+  };
+  window.deleteAdminMpfSupport=function(id){
+    if(!ensure()||!confirm('Delete this support request?'))return;
+    db.farmerSupport=db.farmerSupport.filter(x=>String(x.id)!==String(id));save();
+  };
+
+  if(typeof renderAll==='function'&&!renderAll.__adminMpfMerged){
+    const old=renderAll;
+    renderAll=function(){
+      const result=old.apply(this,arguments);
+      try{window.renderAdminMpfConnect()}catch(e){}
+      return result;
+    };
+    renderAll.__adminMpfMerged=true;
+  }
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    const d=document.getElementById('ampfChecklistDate');
+    if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);
+    setTimeout(()=>{try{window.renderAdminMpfConnect()}catch(e){}},500);
+  });
+})();
+</script>
+
+
+<script id="mpf-cross-device-farmer-portal">
+(function(){
+  let mpfPortalPublishing=false,mpfPortalActionTimer=null;
+
+  function portalEnsure(){
+    if(typeof db==='undefined')return false;
+    ['farmerOrders','farmerChecklists','farmerSupport','farmerNotices'].forEach(k=>{
+      if(!Array.isArray(db[k]))db[k]=[];
+    });
+    return true;
+  }
+
+  function portalFarmerPayload(f){
+    const farmerId=f.id;
+    const batches=(db.batches||[]).filter(b=>b.farmer===farmerId);
+    const batchIds=new Set(batches.map(b=>b.id));
+    return {
+      version:3,
+      updatedAt:new Date().toISOString(),
+      farmer:{...f},
+      batches:batches.map(x=>({...x})),
+      followups:(db.followups||[]).filter(x=>x.farmer===farmerId||batchIds.has(x.batch)).map(x=>({...x})),
+      liftings:(db.liftings||[]).filter(x=>x.farmer===farmerId||batchIds.has(x.batch)).map(x=>({...x})),
+      inventory:(db.inventory||[]).filter(x=>['Feeds','Equipment'].includes(String(x.category||''))).map(x=>({...x})),
+      farmerOrders:(db.farmerOrders||[]).filter(x=>x.farmerId===farmerId).map(x=>({...x})),
+      farmerChecklists:(db.farmerChecklists||[]).filter(x=>x.farmerId===farmerId).map(x=>({...x})),
+      farmerSupport:(db.farmerSupport||[]).filter(x=>x.farmerId===farmerId).map(x=>({...x})),
+      farmerNotices:(db.farmerNotices||[]).map(x=>({...x}))
+    };
+  }
+
+  window.publishFarmerPortalCloud=async function(){
+    if(mpfPortalPublishing||!portalEnsure()||!supabaseClient||!currentUser)return;
+    mpfPortalPublishing=true;
+    try{
+      const farmers=(db.farmers||[]);
+      if(!farmers.length)return;
+      const rows=farmers.map(f=>({
+        farmer_id:String(f.id),
+        owner_id:currentUser.id,
+        data:portalFarmerPayload(f),
+        updated_at:new Date().toISOString()
+      }));
+      const {error}=await supabaseClient.from('mpf_farmer_portal').upsert(rows,{onConflict:'farmer_id'});
+      if(error)console.error('Farmer portal cloud publish failed:',error);
+    }catch(e){console.error('Farmer portal cloud publish failed:',e)}
+    finally{mpfPortalPublishing=false}
+  };
+
+  async function pullFarmerPortalActions(){
+    if(!portalEnsure()||!supabaseClient||!currentUser)return;
+    try{
+      const {data,error}=await supabaseClient.from('mpf_farmer_portal_actions')
+        .select('*').eq('processed',false).order('created_at',{ascending:true}).limit(100);
+      if(error){console.error('Farmer portal actions load failed:',error);return}
+      if(!data?.length)return;
+
+      let changed=false;
+      for(const row of data){
+        const a=row.data||{},farmerId=row.farmer_id;
+        if(row.action_type==='order'){
+          const obj={...a,farmerId};
+          const i=db.farmerOrders.findIndex(x=>String(x.id)===String(obj.id));
+          if(i>=0){
+            const status=db.farmerOrders[i].status||'Pending';
+            db.farmerOrders[i]={...db.farmerOrders[i],...obj,status};
+          }else db.farmerOrders.unshift({...obj,status:obj.status||'Pending'});
+          changed=true;
+        }else if(row.action_type==='checklist'){
+          const obj={...a,farmerId};
+          const i=db.farmerChecklists.findIndex(x=>String(x.id)===String(obj.id));
+          if(i>=0)db.farmerChecklists[i]={...db.farmerChecklists[i],...obj};
+          else db.farmerChecklists.unshift(obj);
+          changed=true;
+        }else if(row.action_type==='support'){
+          const obj={...a,farmerId};
+          if(!db.farmerSupport.some(x=>String(x.id)===String(obj.id)))db.farmerSupport.unshift(obj);
+          changed=true;
+        }
+      }
+
+      const ids=data.map(x=>x.id);
+      await supabaseClient.from('mpf_farmer_portal_actions').update({processed:true}).in('id',ids);
+
+      if(changed){
+        if(typeof save==='function')save();
+        setTimeout(()=>window.publishFarmerPortalCloud?.(),600);
+      }
+    }catch(e){console.error('Farmer portal action processing failed:',e)}
+  }
+
+  if(typeof renderAll==='function'&&!renderAll.__crossDeviceFarmerPortalWrapped){
+    const old=renderAll;
+    renderAll=function(){
+      const result=old.apply(this,arguments);
+      clearTimeout(window.__mpfPortalPublishTimer);
+      window.__mpfPortalPublishTimer=setTimeout(()=>window.publishFarmerPortalCloud?.(),700);
+      return result;
+    };
+    renderAll.__crossDeviceFarmerPortalWrapped=true;
+  }
+
+  window.addEventListener('load',()=>{
+    setTimeout(()=>window.publishFarmerPortalCloud?.(),2200);
+    if(!mpfPortalActionTimer)mpfPortalActionTimer=setInterval(pullFarmerPortalActions,4000);
+  });
 })();
 </script>
 
